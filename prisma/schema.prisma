@@ -1,0 +1,230 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BlockType {
+  TEXT
+  VIDEO
+  IMAGE
+  FORMULA
+  WORKED_EXAMPLE
+  CALLOUT
+  // An inline comprehension-check question (mcq/numeric/short_text - see
+  // QuestionType), rendered in place within the lesson flow. Distinct from
+  // the Question model, which is the future test bank for SLO/unit/course
+  // tests, not shown inline in lessons.
+  QUESTION
+}
+
+enum QuestionType {
+  MCQ
+  NUMERIC
+  SHORT_TEXT
+  TRUE_FALSE
+  FILL_IN_BLANK
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TestScope {
+  SLO
+  UNIT
+  COURSE
+}
+
+model Course {
+  id         String        @id @default(cuid())
+  slug       String        @unique
+  title      String
+  classLevel Int
+  subject    String
+  board      String        @default("AKU-EB")
+  status     ContentStatus @default(DRAFT)
+  orderIndex Int           @default(0)
+  chapters   Chapter[]
+  testAttempts TestAttempt[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model Chapter {
+  id         String        @id @default(cuid())
+  course     Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId   String
+  orderIndex Int
+  title      String
+  status     ContentStatus @default(DRAFT)
+  topics     Topic[]
+  contentBlocks ContentBlock[]
+  testAttempts TestAttempt[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([courseId, orderIndex])
+}
+
+model Topic {
+  id         String        @id @default(cuid())
+  chapter    Chapter       @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chapterId  String
+  code       String
+  orderIndex Int
+  title      String
+  status     ContentStatus @default(DRAFT)
+  slos       Slo[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([chapterId, code])
+}
+
+model Slo {
+  id             String        @id @default(cuid())
+  topic          Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topicId        String
+  code           String
+  orderIndex     Int
+  sloText        String
+  // Bloom's-style code from the board's own SLO documents: R=Remember,
+  // U=Understand, A=Apply, An=Analyze, E=Evaluate, FA=Formative Application.
+  cognitiveLevel String
+  status         ContentStatus @default(DRAFT)
+  contentBlocks  ContentBlock[]
+  questions      Question[]
+  userProgress   UserProgress[]
+  testAttempts   TestAttempt[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([topicId, code])
+}
+
+// Belongs to exactly one of Slo (a sub-lesson's content) or Chapter (a unit's
+// intro, shown before its lessons) - enforced by a CHECK constraint in the
+// migration since Prisma's schema DSL has no way to express it directly.
+model ContentBlock {
+  id         String    @id @default(cuid())
+  slo        Slo?      @relation(fields: [sloId], references: [id], onDelete: Cascade)
+  sloId      String?
+  chapter    Chapter?  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chapterId  String?
+  orderIndex Int
+  blockType  BlockType
+  // Shape depends on blockType, e.g. { "text": "..." } or { "youtubeId": "..." }
+  content    Json
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([sloId, orderIndex])
+  @@index([chapterId, orderIndex])
+}
+
+// The test bank: questions pulled to generate SLO/unit/course tests
+// (TestAttempt), not shown inline in lesson content. For in-lesson
+// comprehension questions, use a ContentBlock with blockType QUESTION.
+model Question {
+  id          String        @id @default(cuid())
+  slo         Slo           @relation(fields: [sloId], references: [id], onDelete: Cascade)
+  sloId       String
+  type        QuestionType
+  difficulty  Difficulty    @default(MEDIUM)
+  prompt      String
+  // Shape depends on type, e.g. MCQ: { "choices": [...], "correctIndex": 0 },
+  // NUMERIC: { "answer": 4, "tolerance": 0.01 }, SHORT_TEXT: { "acceptedAnswers": [...] }
+  data        Json
+  explanation String?
+  status      ContentStatus @default(DRAFT)
+  attemptAnswers TestAttemptAnswer[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([sloId])
+}
+
+// A 1:1 profile row alongside Supabase's own auth.users table - id is
+// always the Supabase auth user's UUID, set explicitly by the app on first
+// login (see lib/auth.ts), never auto-generated. Supabase owns credentials
+// entirely; this table only holds app-specific fields.
+model User {
+  id           String         @id
+  email        String         @unique
+  name         String?
+  isAdmin      Boolean        @default(false)
+  progress     UserProgress[]
+  testAttempts TestAttempt[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model UserProgress {
+  id           String         @id @default(cuid())
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  slo          Slo            @relation(fields: [sloId], references: [id], onDelete: Cascade)
+  sloId        String
+  status       ProgressStatus @default(NOT_STARTED)
+  lastViewedAt DateTime?
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([userId, sloId])
+}
+
+// A generated test. scope determines which of sloId/chapterId/courseId is set.
+// questionIds is a snapshot of exactly what was served, so grading stays
+// consistent even if the question bank changes later.
+model TestAttempt {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  scope       TestScope
+  slo         Slo?      @relation(fields: [sloId], references: [id], onDelete: Cascade)
+  sloId       String?
+  chapter     Chapter?  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chapterId   String?
+  course      Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId    String?
+  questionIds Json
+  score       Float?
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+  answers     TestAttemptAnswer[]
+
+  @@index([userId])
+}
+
+model TestAttemptAnswer {
+  id              String      @id @default(cuid())
+  attempt         TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attemptId       String
+  question        Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId      String
+  userAnswer      Json
+  isCorrect       Boolean
+  timeSpentSeconds Int?
+
+  @@unique([attemptId, questionId])
+}

@@ -1,8 +1,36 @@
 @import "tailwindcss";
+@import "katex/dist/katex.min.css";
+@import "mathlive/static.css";
+
+/* We drive math-field input with our own button panel (MathKeyboardInput),
+   so hide MathLive's own built-in virtual-keyboard/menu toggle icons and
+   the popup keyboard they open - otherwise clicking them opens a second,
+   redundant on-screen keyboard on top of ours. */
+math-field::part(virtual-keyboard-toggle),
+math-field::part(menu-toggle) {
+  display: none;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+/* MathLive picks its selection/highlight colors partly from the OS-level
+   prefers-color-scheme media query, which can disagree with this app's own
+   light/dark toggle (a class on <html>, independent of OS setting) and
+   produce mismatched/unreadable highlight colors. Pin them to our own
+   theme tokens so the mathfield always matches the app's actual theme. */
+math-field {
+  --selection-color: var(--foreground);
+  --selection-background-color: color-mix(in srgb, var(--foreground) 20%, var(--background));
 }
 
 @theme inline {
@@ -12,15 +40,60 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.prose-content h1,
+.prose-content h2,
+.prose-content h3 {
+  font-weight: 600;
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+}
+.prose-content h1 {
+  font-size: 1.5em;
+}
+.prose-content h2 {
+  font-size: 1.25em;
+}
+.prose-content h3 {
+  font-size: 1.1em;
+}
+.prose-content p {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+.prose-content ul,
+.prose-content ol {
+  margin-top: 0.5em;
+  margin-bottom: 0.75em;
+  padding-left: 1.5em;
+}
+.prose-content ul {
+  list-style: disc;
+}
+.prose-content ol {
+  list-style: decimal;
+}
+.prose-content li {
+  margin-top: 0.25em;
+}
+.prose-content strong {
+  font-weight: 600;
+}
+.prose-content code {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  border-radius: 0.25em;
+  padding: 0.1em 0.35em;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+.prose-content a {
+  text-decoration: underline;
+}
+.prose-content > *:first-child {
+  margin-top: 0;
 }
