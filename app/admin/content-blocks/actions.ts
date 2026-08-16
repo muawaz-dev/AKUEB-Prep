@@ -86,9 +86,14 @@ function buildBlockContent(blockType: BlockType, formData: FormData): Prisma.Inp
     case "TEXT":
       return { text: field(formData, "text") };
     case "VIDEO":
-      return { youtubeId: field(formData, "youtubeId"), caption: field(formData, "caption") || undefined };
+      return {
+        title: field(formData, "title") || undefined,
+        youtubeId: field(formData, "youtubeId"),
+        caption: field(formData, "caption") || undefined,
+      };
     case "IMAGE":
       return {
+        title: field(formData, "title") || undefined,
         url: field(formData, "url"),
         alt: field(formData, "alt") || undefined,
         caption: field(formData, "caption") || undefined,
@@ -96,7 +101,11 @@ function buildBlockContent(blockType: BlockType, formData: FormData): Prisma.Inp
     case "FORMULA":
       return { latex: field(formData, "latex"), caption: field(formData, "caption") || undefined };
     case "WORKED_EXAMPLE":
-      return { problem: field(formData, "problem"), solution: field(formData, "solution") };
+      return {
+        title: field(formData, "title") || undefined,
+        problem: field(formData, "problem"),
+        solution: field(formData, "solution"),
+      };
     case "CALLOUT":
       return { title: field(formData, "title") || undefined, text: field(formData, "text") };
     case "QUESTION":

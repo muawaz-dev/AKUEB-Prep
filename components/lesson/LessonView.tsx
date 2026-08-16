@@ -4,55 +4,31 @@ import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import type { BlockType, ProgressStatus } from "@/app/generated/prisma/enums";
 import { ContentBlockView } from "./ContentBlockView";
+import { MarkdownContent } from "./MarkdownContent";
 import { setSloProgress } from "@/app/progress/actions";
 
 type SloData = {
   id: string;
   code: string;
   sloText: string;
+  cognitiveLevel: string;
   contentBlocks: { id: string; blockType: BlockType; content: Record<string, unknown> }[];
 };
 
 type SiblingTopic = { id: string; code: string; title: string };
 
-function sloIcon(slo: SloData) {
-  const hasVideo = slo.contentBlocks.some((b) => b.blockType === "VIDEO");
-  const isPracticeOnly =
-    slo.contentBlocks.length > 0 && slo.contentBlocks.every((b) => b.blockType === "QUESTION");
-
-  if (isPracticeOnly) {
-    return (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-      </svg>
-    );
-  }
-  if (hasVideo) {
-    return (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <polygon points="5 3 19 12 5 21 5 3" />
-      </svg>
-    );
-  }
+function ArrowIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+      <path d="M9.5 6 15 12l-5.5 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function CheckBadge() {
+function CloseIcon() {
   return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="text-green-600 dark:text-green-500 shrink-0"
-    >
-      <circle cx="12" cy="12" r="10" fill="currentColor" />
-      <path d="M8 12.5l2.5 2.5L16 9" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+      <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
     </svg>
   );
 }
@@ -60,6 +36,7 @@ function CheckBadge() {
 export function LessonView({
   courseSlug,
   breadcrumb,
+  topicCode,
   topicTitle,
   slos,
   prevTopic,
@@ -69,6 +46,7 @@ export function LessonView({
 }: {
   courseSlug: string;
   breadcrumb: React.ReactNode;
+  topicCode: string;
   topicTitle: string;
   slos: SloData[];
   prevTopic: SiblingTopic | null;
@@ -78,6 +56,7 @@ export function LessonView({
 }) {
   const [selectedId, setSelectedId] = useState(slos[0]?.id);
   const [progress, setProgress] = useState(initialProgress);
+  const [sloNavOpen, setSloNavOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const selected = slos.find((s) => s.id === selectedId) ?? slos[0];
 
@@ -107,11 +86,34 @@ export function LessonView({
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
-      <aside className="w-80 shrink-0 border-r border-black/10 dark:border-white/10 flex flex-col">
+    <div className="flex h-[calc(100dvh-6.25rem)] lg:h-[calc(100dvh-3.5rem)] relative">
+      {sloNavOpen && (
+        <div
+          onClick={() => setSloNavOpen(false)}
+          aria-hidden="true"
+          className="lg:hidden fixed inset-x-0 top-[6.25rem] h-[calc(100dvh-6.25rem)] bg-black/40 z-20"
+        />
+      )}
+
+      <aside
+        className={`w-80 shrink-0 border-r border-black/10 dark:border-white/10 flex flex-col bg-white dark:bg-black
+          fixed top-[6.25rem] left-0 h-[calc(100dvh-6.25rem)] z-30 transition-transform duration-300 ease-in-out
+          ${sloNavOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:static lg:translate-x-0 lg:z-auto lg:h-auto`}
+      >
         <div className="p-4 border-b border-black/10 dark:border-white/10">
-          <div className="text-xs font-medium text-black/50 dark:text-white/50 uppercase tracking-wide">
-            {breadcrumb}
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm font-medium text-black/50 dark:text-white/50 uppercase tracking-wide">
+              {breadcrumb}
+            </div>
+            <button
+              type="button"
+              onClick={() => setSloNavOpen(false)}
+              aria-label="Close lessons list"
+              className="lg:hidden text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white"
+            >
+              <CloseIcon />
+            </button>
           </div>
           <div className="flex items-center justify-between gap-2 mt-1">
             {prevTopic ? (
@@ -125,7 +127,9 @@ export function LessonView({
             ) : (
               <span />
             )}
-            <div className="font-semibold text-sm flex-1">{topicTitle}</div>
+            <div className="font-semibold text-base flex-1">
+              <MarkdownContent text={topicTitle} inline />
+            </div>
             {nextTopic ? (
               <Link
                 href={`/courses/${courseSlug}/lessons/${nextTopic.id}`}
@@ -143,21 +147,27 @@ export function LessonView({
         <ul className="flex-1 overflow-y-auto">
           {slos.map((slo) => {
             const isSelected = slo.id === selected?.id;
-            const isCompleted = progress[slo.id] === "COMPLETED";
             return (
               <li key={slo.id}>
                 <button
                   type="button"
-                  onClick={() => setSelectedId(slo.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left text-sm border-l-2 ${
+                  onClick={() => {
+                    setSelectedId(slo.id);
+                    setSloNavOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left border-l-2 ${
                     isSelected
-                      ? "border-black dark:border-white bg-black/5 dark:bg-white/10 font-medium"
+                      ? "border-black dark:border-white bg-black/5 dark:bg-white/10"
                       : "border-transparent hover:bg-black/5 dark:hover:bg-white/5"
                   }`}
                 >
-                  <span className="shrink-0">{sloIcon(slo)}</span>
-                  <span className="truncate flex-1">{slo.sloText}</span>
-                  {isCompleted && <CheckBadge />}
+                  <span className="text-base text-black/80 dark:text-white/80 shrink-0">{slo.code}</span>
+                  <span className="flex-1 flex justify-center">
+                    <span className="w-8 border-t border-black/10 dark:border-white/10" />
+                  </span>
+                  <span className="text-xs font-medium text-black/45 dark:text-white/45 uppercase tracking-wide shrink-0">
+                    {slo.cognitiveLevel}
+                  </span>
                 </button>
               </li>
             );
@@ -165,49 +175,86 @@ export function LessonView({
         </ul>
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto w-full p-8 flex flex-col gap-6">
+      <main className="flex-1 overflow-y-auto min-w-0">
+        {!sloNavOpen && (
+          <div className="lg:hidden sticky top-0 z-10 flex items-center gap-3 border-b border-black/10 dark:border-white/10 bg-white dark:bg-black px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setSloNavOpen(true)}
+              aria-label="Show lessons list"
+              className="text-black/70 dark:text-white/70"
+            >
+              <ArrowIcon />
+            </button>
+            <span className="text-sm font-medium truncate">Topic {topicCode}: Select Sub-Topic</span>
+          </div>
+        )}
+
+        <div className="max-w-4xl mx-auto w-full p-8 flex flex-col gap-6">
           {selected ? (
             <>
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                 <div>
-                  <div className="text-xs font-semibold text-black/40 dark:text-white/40">{selected.code}</div>
-                  <h1 className="text-xl font-semibold">{selected.sloText}</h1>
+                  <h1 className="text-3xl font-semibold">SLO {selected.code}</h1>
+                  <p className="text-lg text-black/70 dark:text-white/70 mt-2">
+                    <MarkdownContent text={selected.sloText} inline />
+                  </p>
                 </div>
                 {isLoggedIn ? (
-                  <button
-                    type="button"
-                    onClick={toggleComplete}
-                    disabled={isPending}
-                    className={`shrink-0 text-xs font-medium rounded px-3 py-1.5 border disabled:opacity-50 ${
+                  <span
+                    className={`self-start shrink-0 text-sm font-medium rounded px-3 py-1.5 border ${
                       progress[selected.id] === "COMPLETED"
                         ? "border-green-600 text-green-600 dark:text-green-500"
-                        : "border-black/20 dark:border-white/20 text-black/60 dark:text-white/60 hover:border-black dark:hover:border-white"
+                        : "border-black/20 dark:border-white/20 text-black/60 dark:text-white/60"
                     }`}
                   >
-                    {progress[selected.id] === "COMPLETED" ? "Completed" : "Mark as complete"}
-                  </button>
+                    {progress[selected.id] === "COMPLETED" ? "Completed" : "Not Completed"}
+                  </span>
                 ) : (
                   <Link
                     href="/login"
-                    className="shrink-0 text-xs text-black/50 dark:text-white/50 hover:underline"
+                    className="self-start shrink-0 text-sm text-black/50 dark:text-white/50 hover:underline"
                   >
                     Log in to track progress
                   </Link>
                 )}
               </div>
 
-              <div className="flex flex-col gap-4">
-                {selected.contentBlocks.map((block) => (
-                  <ContentBlockView key={block.id} blockType={block.blockType} content={block.content} />
+              <div className="flex flex-col">
+                {selected.contentBlocks.map((block, i) => (
+                  <div
+                    key={block.id}
+                    className={
+                      i < selected.contentBlocks.length - 1
+                        ? "pb-8 mb-8 border-b-2 border-black/10 dark:border-white/10"
+                        : ""
+                    }
+                  >
+                    <ContentBlockView blockType={block.blockType} content={block.content} />
+                  </div>
                 ))}
                 {selected.contentBlocks.length === 0 && (
-                  <p className="text-sm text-black/40 dark:text-white/40">No content yet for this SLO.</p>
+                  <p className="text-base text-black/40 dark:text-white/40">No content yet for this SLO.</p>
                 )}
               </div>
+
+              {isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={toggleComplete}
+                  disabled={isPending}
+                  className={`w-fit text-base font-medium rounded px-4 py-2 border disabled:opacity-50 ${
+                    progress[selected.id] === "COMPLETED"
+                      ? "border-green-600 text-green-600 dark:text-green-500 hover:bg-green-600/10"
+                      : "bg-black text-white dark:bg-white dark:text-black hover:opacity-90"
+                  }`}
+                >
+                  {progress[selected.id] === "COMPLETED" ? "Mark as incomplete" : "Mark as complete"}
+                </button>
+              )}
             </>
           ) : (
-            <p className="text-sm text-black/50 dark:text-white/50">No content published for this lesson yet.</p>
+            <p className="text-base text-black/50 dark:text-white/50">No content published for this lesson yet.</p>
           )}
         </div>
       </main>

@@ -7,31 +7,29 @@ export async function SiteHeader() {
   const user = await getCurrentUser();
 
   return (
-    <header className="border-b border-black/10 dark:border-white/10 sticky top-0 bg-background z-10">
-      <div className="max-w-5xl mx-auto w-full px-6 h-14 flex items-center justify-between">
-        <Link href="/courses" className="font-semibold">
+    <header className="h-14 border-b border-white/10 sticky top-0 bg-brand text-white z-20">
+      <div className="max-w-5xl mx-auto w-full h-full px-6 flex items-center justify-between">
+        <Link href="/courses" className="text-lg font-semibold">
           AKUEB Maths
         </Link>
         <div className="flex items-center gap-4">
           {user ? (
             <>
-              <span className="text-sm text-black/60 dark:text-white/60 hidden sm:inline">
-                {user.name || user.email}
-              </span>
+              <span className="text-base text-white/70 hidden sm:inline">{user.name || user.email}</span>
               <form action={logoutAction}>
-                <button type="submit" className="text-sm hover:underline">
+                <button type="submit" className="text-base hover:underline">
                   Log out
                 </button>
               </form>
             </>
           ) : (
             <>
-              <Link href="/login" className="text-sm hover:underline">
+              <Link href="/login" className="text-base hover:underline">
                 Log in
               </Link>
               <Link
                 href="/signup"
-                className="text-sm bg-black text-white dark:bg-white dark:text-black rounded px-3 py-1.5 font-medium"
+                className="text-base bg-white text-brand hover:bg-white/90 rounded px-3 py-1.5 font-medium"
               >
                 Sign up
               </Link>

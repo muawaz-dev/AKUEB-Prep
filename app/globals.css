@@ -16,6 +16,7 @@ math-field::part(menu-toggle) {
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --brand: #13265c;
 }
 
 .dark {
@@ -36,8 +37,13 @@ math-field {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Shared with prose-content h1 below, so admin-set block/question titles
+     (which live outside markdown) can match a lesson's own "# heading"
+     size exactly via the `text-heading` utility instead of a guessed value. */
+  --text-heading: 1.75rem;
 }
 
 body {
@@ -46,6 +52,9 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.prose-content {
+  font-size: 1.0625rem;
+}
 .prose-content h1,
 .prose-content h2,
 .prose-content h3 {
@@ -54,13 +63,13 @@ body {
   margin-bottom: 0.5em;
 }
 .prose-content h1 {
-  font-size: 1.5em;
+  font-size: var(--text-heading);
 }
 .prose-content h2 {
-  font-size: 1.25em;
+  font-size: 1.5rem;
 }
 .prose-content h3 {
-  font-size: 1.1em;
+  font-size: 1.25rem;
 }
 .prose-content p {
   margin-top: 0.75em;

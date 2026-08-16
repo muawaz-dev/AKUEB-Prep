@@ -36,7 +36,8 @@ export function ContentBlockView({
 
     case "VIDEO":
       return (
-        <figure className="flex flex-col gap-2">
+        <figure className="flex flex-col gap-6 mt-6">
+          {content.title && <div className="text-center text-heading font-bold">{content.title}</div>}
           <div className="aspect-video w-full">
             <iframe
               className="h-full w-full rounded"
@@ -53,7 +54,8 @@ export function ContentBlockView({
 
     case "IMAGE":
       return (
-        <figure className="flex flex-col gap-2">
+        <figure className="flex flex-col gap-6 mt-6">
+          {content.title && <div className="text-center text-heading font-bold">{content.title}</div>}
           {/* eslint-disable-next-line @next/next/no-img-element -- admin-supplied external URLs, not local optimized assets */}
           <img src={content.url} alt={content.alt ?? ""} className="rounded max-w-full" />
           {content.caption && (
@@ -76,7 +78,12 @@ export function ContentBlockView({
 
     case "WORKED_EXAMPLE":
       return (
-        <div className="border border-black/10 dark:border-white/10 rounded p-4 flex flex-col gap-3">
+        <div className="rounded p-4 flex flex-col gap-3 bg-black/[0.04] dark:bg-white/[0.06]">
+          {content.title && (
+            <p className="text-center text-heading font-bold">
+              <MarkdownContent text={content.title} inline />
+            </p>
+          )}
           <div>
             <div className="text-xs font-semibold text-black/50 dark:text-white/50 mb-1">PROBLEM</div>
             <MarkdownContent text={content.problem ?? ""} />

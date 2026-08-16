@@ -97,20 +97,20 @@ export function QuestionWidget({
   const partsCorrectCount = type === "TRUE_FALSE" ? tfCorrectCount : type === "FILL_IN_BLANK" ? blankCorrectCount : 0;
 
   return (
-    <div className="border border-black/10 dark:border-white/10 rounded p-4 flex flex-col gap-3">
+    <div className="rounded p-4 flex flex-col gap-3 bg-black/[0.04] dark:bg-white/[0.06]">
       {title && (
-        <p className="text-center text-xl font-bold">
+        <p className="text-center text-heading font-bold">
           <MarkdownContent text={title} inline />
         </p>
       )}
-      <p className="font-medium">
+      <p className="text-lg font-medium">
         <MarkdownContent text={prompt} inline />
       </p>
 
       {type === "MCQ" && (
         <div className="flex flex-col gap-2">
           {(data.choices ?? []).map((choice, i) => (
-            <label key={i} className="flex items-center gap-2 text-sm">
+            <label key={i} className="flex items-center gap-2 text-base">
               <input
                 type="radio"
                 name={`mcq-${prompt}`}
@@ -158,7 +158,7 @@ export function QuestionWidget({
             return (
               <div key={i} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm flex-1">
+                  <span className="text-base flex-1">
                     <MarkdownContent text={statement.text} inline />
                   </span>
                   <div className="flex gap-1.5 shrink-0">
@@ -203,7 +203,7 @@ export function QuestionWidget({
       )}
 
       {type === "FILL_IN_BLANK" && (
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 text-sm leading-8">
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 text-base leading-8">
           {blanks.map((blank, i) => {
             const value = blankInputs[i] ?? "";
             const gotRight = checked && matches(value, blank.answer);
@@ -276,19 +276,19 @@ export function QuestionWidget({
         type="button"
         disabled={!canCheck}
         onClick={() => setChecked(true)}
-        className="bg-black text-white dark:bg-white dark:text-black rounded px-3 py-2 text-sm font-medium w-fit disabled:opacity-40"
+        className="bg-black text-white dark:bg-white dark:text-black rounded px-3 py-2 text-base font-medium w-fit disabled:opacity-40"
       >
         Check answer
       </button>
 
       {checked && partsTotal > 0 && (
-        <div className={`text-sm ${partsCorrectCount === partsTotal ? "text-green-600" : "text-red-600"}`}>
+        <div className={`text-base ${partsCorrectCount === partsTotal ? "text-green-600" : "text-red-600"}`}>
           {partsCorrectCount} of {partsTotal} correct
         </div>
       )}
 
       {checked && (
-        <div className={`text-sm ${correct ? "text-green-600" : "text-red-600"}`}>
+        <div className={`text-base ${correct ? "text-green-600" : "text-red-600"}`}>
           {correct ? "Correct!" : "Not quite."}
           {explanation && (
             <p className="mt-1 text-black/70 dark:text-white/70">

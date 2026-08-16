@@ -69,11 +69,13 @@ export default async function LessonPage({
     <LessonView
       courseSlug={courseSlug}
       breadcrumb={breadcrumb}
+      topicCode={topic.code}
       topicTitle={`${topic.code} ${topic.title}`}
       slos={topic.slos.map((slo) => ({
         id: slo.id,
         code: slo.code,
         sloText: slo.sloText,
+        cognitiveLevel: slo.cognitiveLevel,
         contentBlocks: slo.contentBlocks.map((b) => ({
           id: b.id,
           blockType: b.blockType,

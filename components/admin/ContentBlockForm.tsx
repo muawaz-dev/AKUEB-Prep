@@ -145,6 +145,10 @@ export function ContentBlockForm({
       {blockType === "VIDEO" && (
         <>
           <label className="flex flex-col gap-1 text-sm">
+            Title (optional, shown above the video)
+            <input name="title" defaultValue={content.title} className={inputClass} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
             YouTube video ID (the part after v=)
             <input name="youtubeId" defaultValue={content.youtubeId} required className={inputClass} />
           </label>
@@ -157,6 +161,10 @@ export function ContentBlockForm({
 
       {blockType === "IMAGE" && (
         <>
+          <label className="flex flex-col gap-1 text-sm">
+            Title (optional, shown above the image)
+            <input name="title" defaultValue={content.title} className={inputClass} />
+          </label>
           <label className="flex flex-col gap-1 text-sm">
             Image URL
             <input name="url" defaultValue={content.url} required className={inputClass} />
@@ -187,6 +195,10 @@ export function ContentBlockForm({
 
       {blockType === "WORKED_EXAMPLE" && (
         <>
+          <label className="flex flex-col gap-1 text-sm">
+            Title (optional)
+            <input name="title" defaultValue={content.title} className={inputClass} />
+          </label>
           <label className="flex flex-col gap-1 text-sm">
             Problem (Markdown + $math$ supported)
             <textarea name="problem" defaultValue={content.problem} required rows={3} className={inputClass} />
