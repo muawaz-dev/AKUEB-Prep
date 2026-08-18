@@ -5,28 +5,10 @@ import { ContentStatus } from "@/app/generated/prisma/enums";
 import type { BlockType } from "@/app/generated/prisma/enums";
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
 import { ContentBlockForm } from "@/components/admin/ContentBlockForm";
+import { ContentBlockList } from "@/components/admin/ContentBlockList";
 import { updateChapter, deleteChapter } from "../actions";
 import { createTopic } from "../../topics/actions";
-import { createContentBlock, updateContentBlock, deleteContentBlock } from "../../content-blocks/actions";
-
-function blockPreview(blockType: BlockType, content: Record<string, unknown>): string {
-  switch (blockType) {
-    case "TEXT":
-      return String(content.text ?? "");
-    case "VIDEO":
-      return `YouTube: ${content.youtubeId ?? ""}`;
-    case "IMAGE":
-      return String(content.url ?? "");
-    case "FORMULA":
-      return String(content.latex ?? "");
-    case "WORKED_EXAMPLE":
-      return String(content.problem ?? "");
-    case "CALLOUT":
-      return String(content.text ?? "");
-    case "QUESTION":
-      return String(content.prompt ?? "");
-  }
-}
+import { createContentBlock, updateContentBlock, deleteContentBlock, reorderContentBlocks } from "../../content-blocks/actions";
 
 export default async function AdminChapterDetailPage({
   params,
@@ -60,9 +42,15 @@ export default async function AdminChapterDetailPage({
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link href={`/admin/courses/${chapter.courseId}`} className="text-sm text-black/50 dark:text-white/50 hover:underline">
-          &larr; {chapter.course.title}
-        </Link>
+        {chapter.course ? (
+          <Link href={`/admin/courses/${chapter.courseId}`} className="text-sm text-black/50 dark:text-white/50 hover:underline">
+            &larr; {chapter.course.title}
+          </Link>
+        ) : (
+          <span className="text-sm text-black/50 dark:text-white/50">
+            Not attached to a course - created for the question bank
+          </span>
+        )}
         <h1 className="text-xl font-semibold mt-1">
           {chapter.orderIndex}. {chapter.title}
         </h1>
@@ -70,7 +58,7 @@ export default async function AdminChapterDetailPage({
 
       <form action={updateChapter} className="flex flex-col gap-3 max-w-sm border border-black/10 dark:border-white/10 rounded p-4">
         <input type="hidden" name="id" value={chapter.id} />
-        <input type="hidden" name="courseId" value={chapter.courseId} />
+        <input type="hidden" name="courseId" value={chapter.courseId ?? ""} />
         <label className="flex flex-col gap-1 text-sm">
           Title
           <input name="title" defaultValue={chapter.title} required className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent" />
@@ -101,42 +89,14 @@ export default async function AdminChapterDetailPage({
         <p className="text-xs text-black/50 dark:text-white/50 mb-2">
           Shown before the lesson list on this unit&rsquo;s page - same content block types as a lesson.
         </p>
-        <div className="flex flex-col gap-2">
-          {chapter.contentBlocks.map((block) => (
-            <details key={block.id} className="border border-black/10 dark:border-white/10 rounded p-4">
-              <summary className="cursor-pointer text-sm">
-                <span className="font-medium">
-                  {block.orderIndex}. {block.blockType}
-                </span>{" "}
-                <span className="text-black/50 dark:text-white/50">
-                  {blockPreview(block.blockType, block.content as Record<string, unknown>).slice(0, 80)}
-                </span>
-              </summary>
-              <div className="mt-4">
-                <ContentBlockForm
-                  owner={{ field: "chapterId", id: chapter.id }}
-                  action={updateContentBlock}
-                  initial={{
-                    id: block.id,
-                    blockType: block.blockType,
-                    orderIndex: block.orderIndex,
-                    content: block.content as Record<string, unknown>,
-                  }}
-                />
-                <form action={deleteContentBlock} className="mt-3">
-                  <input type="hidden" name="id" value={block.id} />
-                  <input type="hidden" name="chapterId" value={chapter.id} />
-                  <ConfirmSubmitButton confirmMessage="Delete this content block?" className="text-sm text-red-600 hover:underline">
-                    Delete block
-                  </ConfirmSubmitButton>
-                </form>
-              </div>
-            </details>
-          ))}
-          {chapter.contentBlocks.length === 0 && (
-            <p className="text-sm text-black/50 dark:text-white/50">No intro content yet.</p>
-          )}
-        </div>
+        <ContentBlockList
+          blocks={chapter.contentBlocks.map((b) => ({ ...b, content: b.content as Record<string, unknown> }))}
+          owner={{ field: "chapterId", id: chapter.id }}
+          updateAction={updateContentBlock}
+          deleteAction={deleteContentBlock}
+          reorderAction={reorderContentBlocks}
+          emptyMessage="No intro content yet."
+        />
 
         <details className="border border-black/10 dark:border-white/10 rounded p-4 mt-2">
           <summary className="cursor-pointer text-sm font-medium">Add an intro content block</summary>
@@ -200,7 +160,7 @@ export default async function AdminChapterDetailPage({
 
       <form action={deleteChapter} className="border border-red-600/30 rounded p-4">
         <input type="hidden" name="id" value={chapter.id} />
-        <input type="hidden" name="courseId" value={chapter.courseId} />
+        <input type="hidden" name="courseId" value={chapter.courseId ?? ""} />
         <p className="text-xs text-black/50 dark:text-white/50 mb-2">
           Deleting a chapter deletes all its topics, SLOs, content, and questions.
         </p>

@@ -15,6 +15,8 @@ export default async function AdminCourseDetailPage({
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     include: {
+      class: true,
+      subject: true,
       chapters: {
         orderBy: { orderIndex: "asc" },
         include: { _count: { select: { topics: true } } },
@@ -45,11 +47,11 @@ export default async function AdminCourseDetailPage({
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Subject
-          <input name="subject" defaultValue={course.subject} required className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent" />
+          <input name="subject" defaultValue={course.subject.name} required className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent" />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Class level
-          <input name="classLevel" type="number" defaultValue={course.classLevel} required className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent" />
+          <input name="classLevel" type="number" defaultValue={course.class.level} required className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent" />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Status

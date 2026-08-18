@@ -20,6 +20,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <aside className="w-56 shrink-0 border-r border-black/10 dark:border-white/10 p-4 flex flex-col gap-6">
         <div className="font-semibold">AKUEB Admin</div>
         <nav className="flex flex-col gap-2 text-sm">
+          <Link href="/admin/questions" className="hover:underline">
+            Questions
+          </Link>
           <Link href="/admin/courses" className="hover:underline">
             Courses
           </Link>

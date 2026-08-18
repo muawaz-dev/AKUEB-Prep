@@ -14,6 +14,8 @@ export default async function CourseDetailPage({
   const course = await prisma.course.findFirst({
     where: { slug: courseSlug, status: "PUBLISHED" },
     include: {
+      class: true,
+      subject: true,
       chapters: {
         where: { status: "PUBLISHED" },
         orderBy: { orderIndex: "asc" },
@@ -62,7 +64,7 @@ export default async function CourseDetailPage({
         </Link>
         <h1 className="text-3xl font-semibold mt-1">{course.title}</h1>
         <p className="text-base text-black/60 dark:text-white/60">
-          Class {course.classLevel} - {course.subject}
+          Class {course.class.level} - {course.subject.name}
         </p>
         {user ? (
           <p className="text-base text-black/60 dark:text-white/60 mt-1">

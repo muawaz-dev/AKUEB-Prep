@@ -4,8 +4,8 @@ import { createCourse } from "./actions";
 
 export default async function AdminCoursesPage() {
   const courses = await prisma.course.findMany({
-    orderBy: [{ classLevel: "asc" }, { orderIndex: "asc" }],
-    include: { _count: { select: { chapters: true } } },
+    orderBy: [{ class: { level: "asc" } }, { orderIndex: "asc" }],
+    include: { class: true, subject: true, _count: { select: { chapters: true } } },
   });
 
   return (
@@ -22,7 +22,7 @@ export default async function AdminCoursesPage() {
               <span>
                 {course.title}{" "}
                 <span className="text-xs text-black/50 dark:text-white/50">
-                  (Class {course.classLevel} - {course.subject})
+                  (Class {course.class.level} - {course.subject.name})
                 </span>
               </span>
               <span className="text-xs text-black/50 dark:text-white/50">

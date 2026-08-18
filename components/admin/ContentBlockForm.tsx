@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type { BlockType, QuestionType } from "@/app/generated/prisma/enums";
 import { MathKeyboardInput } from "@/components/MathKeyboardInput";
 
@@ -17,8 +17,9 @@ type BlockContent = {
   questionType?: QuestionType;
   prompt?: string;
   explanation?: string;
-  choices?: string[];
-  correctIndex?: number;
+  imageUrl?: string;
+  imageAlt?: string;
+  mcqQuestions?: McqQuestion[];
   answer?: number;
   tolerance?: number;
   acceptedAnswers?: string[];
@@ -27,6 +28,7 @@ type BlockContent = {
   blanks?: BlankConfig[];
 };
 
+type McqQuestion = { text: string; choices: string[]; correctIndex: number; explanation?: string };
 type TrueFalseStatement = { text: string; isTrue: boolean; explanation?: string };
 type BlankConfig = { options?: string[]; answer: string };
 
@@ -53,7 +55,7 @@ export function ContentBlockForm({
   action,
   initial,
 }: {
-  owner: { field: "sloId"; id: string } | { field: "chapterId"; id: string };
+  owner: { field: "sloId"; id: string } | { field: "chapterId"; id: string } | { field: "topicId"; id: string };
   action: (formData: FormData) => void;
   initial?: {
     id: string;
@@ -62,13 +64,45 @@ export function ContentBlockForm({
     content: BlockContent;
   };
 }) {
+  const [isPending, startTransition] = useTransition();
   const [blockType, setBlockType] = useState<BlockType>(initial?.blockType ?? "TEXT");
   const [questionType, setQuestionType] = useState<QuestionType>(initial?.content.questionType ?? "MCQ");
   const content = initial?.content ?? {};
-  const choices = content.choices ?? ["", "", "", ""];
+  const [mcqQuestions, setMcqQuestions] = useState<McqQuestion[]>(
+    content.mcqQuestions?.length ? content.mcqQuestions : [{ text: "", choices: ["", ""], correctIndex: 0 }]
+  );
   const [statements, setStatements] = useState<TrueFalseStatement[]>(
     content.statements?.length ? content.statements : [{ text: "", isTrue: true, explanation: "" }]
   );
+
+  function updateMcqQuestion(index: number, patch: Partial<McqQuestion>) {
+    setMcqQuestions((prev) => prev.map((q, i) => (i === index ? { ...q, ...patch } : q)));
+  }
+  function removeMcqQuestion(index: number) {
+    setMcqQuestions((prev) => prev.filter((_, i) => i !== index));
+  }
+  function addMcqQuestion() {
+    setMcqQuestions((prev) => [...prev, { text: "", choices: ["", ""], correctIndex: 0 }]);
+  }
+  function updateMcqChoice(qIndex: number, choiceIndex: number, value: string) {
+    setMcqQuestions((prev) =>
+      prev.map((q, i) => (i === qIndex ? { ...q, choices: q.choices.map((c, ci) => (ci === choiceIndex ? value : c)) } : q))
+    );
+  }
+  function addMcqChoice(qIndex: number) {
+    setMcqQuestions((prev) => prev.map((q, i) => (i === qIndex ? { ...q, choices: [...q.choices, ""] } : q)));
+  }
+  function removeMcqChoice(qIndex: number, choiceIndex: number) {
+    setMcqQuestions((prev) =>
+      prev.map((q, i) => {
+        if (i !== qIndex) return q;
+        const choices = q.choices.filter((_, ci) => ci !== choiceIndex);
+        const correctIndex =
+          choiceIndex === q.correctIndex ? 0 : choiceIndex < q.correctIndex ? q.correctIndex - 1 : q.correctIndex;
+        return { ...q, choices, correctIndex };
+      })
+    );
+  }
 
   function updateStatement(index: number, patch: Partial<TrueFalseStatement>) {
     setStatements((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
@@ -108,9 +142,23 @@ export function ContentBlockForm({
   }
 
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        // Submitting via a manually-built FormData (rather than the declarative
+        // <form action={...}> binding) avoids React's automatic post-Action form
+        // reset, which otherwise desyncs this form's many controlled inputs
+        // (blockType, questionType, and every dynamic MCQ/TRUE_FALSE/blank row)
+        // from their underlying state - the DOM gets reset to its first-mount
+        // values without firing change events, so React never re-syncs it back.
+        const formData = new FormData(e.currentTarget);
+        startTransition(() => action(formData));
+      }}
+      className="flex flex-col gap-3"
+    >
       <input type="hidden" name="sloId" value={owner.field === "sloId" ? owner.id : ""} />
       <input type="hidden" name="chapterId" value={owner.field === "chapterId" ? owner.id : ""} />
+      <input type="hidden" name="topicId" value={owner.field === "topicId" ? owner.id : ""} />
       {initial && <input type="hidden" name="id" value={initial.id} />}
 
       <div className="flex gap-3">
@@ -230,6 +278,14 @@ export function ContentBlockForm({
             <input name="title" defaultValue={content.title} className={inputClass} />
           </label>
           <label className="flex flex-col gap-1 text-sm">
+            Image URL (optional, shown after the title and before the question)
+            <input name="imageUrl" defaultValue={content.imageUrl} className={inputClass} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Image alt text (optional)
+            <input name="imageAlt" defaultValue={content.imageAlt} className={inputClass} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
             Prompt
             <textarea name="prompt" defaultValue={content.prompt} required rows={2} className={inputClass} />
           </label>
@@ -250,20 +306,82 @@ export function ContentBlockForm({
           </label>
 
           {questionType === "MCQ" && (
-            <div className="flex flex-col gap-2">
-              <span className="text-sm">Choices (mark the correct one)</span>
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-2">
+            <div className="flex flex-col gap-3">
+              <span className="text-sm">Questions (mark the correct choice for each, add as many as you want)</span>
+              {mcqQuestions.map((q, qi) => (
+                <div key={qi} className="border border-black/10 dark:border-white/10 rounded p-3 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      name="mcqQuestionText"
+                      value={q.text}
+                      onChange={(e) => updateMcqQuestion(qi, { text: e.target.value })}
+                      placeholder="Question text"
+                      required
+                      className={`${inputClass} flex-1`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeMcqQuestion(qi)}
+                      disabled={mcqQuestions.length <= 1}
+                      className="text-sm text-red-600 hover:underline disabled:opacity-30 disabled:hover:no-underline shrink-0"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 pl-1">
+                    {q.choices.map((choice, ci) => (
+                      <div key={ci} className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`mcqCorrectIndex_${qi}`}
+                          value={ci}
+                          checked={q.correctIndex === ci}
+                          onChange={() => updateMcqQuestion(qi, { correctIndex: ci })}
+                        />
+                        <input
+                          name={`mcqChoiceText_${qi}`}
+                          value={choice}
+                          onChange={(e) => updateMcqChoice(qi, ci, e.target.value)}
+                          placeholder={`Choice ${ci + 1}`}
+                          required
+                          className={`${inputClass} flex-1`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeMcqChoice(qi, ci)}
+                          disabled={q.choices.length <= 2}
+                          className="text-sm text-red-600 hover:underline disabled:opacity-30 disabled:hover:no-underline shrink-0"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => addMcqChoice(qi)}
+                      className="text-sm border border-black/20 dark:border-white/20 rounded px-3 py-1.5 w-fit hover:bg-black/5 dark:hover:bg-white/5"
+                    >
+                      + Add choice
+                    </button>
+                  </div>
+
                   <input
-                    type="radio"
-                    name="correctIndex"
-                    value={i}
-                    defaultChecked={(content.correctIndex ?? 0) === i}
-                    required
+                    name="mcqQuestionExplanation"
+                    value={q.explanation ?? ""}
+                    onChange={(e) => updateMcqQuestion(qi, { explanation: e.target.value })}
+                    placeholder="Explanation shown after checking (optional)"
+                    className={inputClass}
                   />
-                  <input name={`choice${i}`} defaultValue={choices[i]} required className={`${inputClass} flex-1`} />
                 </div>
               ))}
+              <button
+                type="button"
+                onClick={addMcqQuestion}
+                className="text-sm border border-black/20 dark:border-white/20 rounded px-3 py-1.5 w-fit hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                + Add question
+              </button>
             </div>
           )}
 
@@ -437,8 +555,12 @@ export function ContentBlockForm({
         </>
       )}
 
-      <button type="submit" className="bg-black text-white dark:bg-white dark:text-black rounded px-3 py-2 text-sm font-medium w-fit">
-        {initial ? "Save block" : "Add block"}
+      <button
+        type="submit"
+        disabled={isPending}
+        className="bg-black text-white dark:bg-white dark:text-black rounded px-3 py-2 text-sm font-medium w-fit disabled:opacity-50"
+      >
+        {isPending ? "Saving..." : initial ? "Save block" : "Add block"}
       </button>
     </form>
   );

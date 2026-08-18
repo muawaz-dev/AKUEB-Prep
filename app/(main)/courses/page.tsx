@@ -7,8 +7,10 @@ export default async function CoursesPage() {
   const [courses, user] = await Promise.all([
     prisma.course.findMany({
       where: { status: "PUBLISHED" },
-      orderBy: [{ classLevel: "asc" }, { orderIndex: "asc" }],
+      orderBy: [{ class: { level: "asc" } }, { orderIndex: "asc" }],
       include: {
+        class: true,
+        subject: true,
         _count: { select: { chapters: true } },
         chapters: {
           where: { status: "PUBLISHED" },
@@ -75,8 +77,8 @@ export default async function CoursesPage() {
                 key={course.id}
                 slug={course.slug}
                 title={course.title}
-                classLevel={course.classLevel}
-                subject={course.subject}
+                classLevel={course.class.level}
+                subject={course.subject.name}
                 chapterCount={course._count.chapters}
                 progress={progressFor(course)}
               />
@@ -96,8 +98,8 @@ export default async function CoursesPage() {
                 key={course.id}
                 slug={course.slug}
                 title={course.title}
-                classLevel={course.classLevel}
-                subject={course.subject}
+                classLevel={course.class.level}
+                subject={course.subject.name}
                 chapterCount={course._count.chapters}
               />
             ))}

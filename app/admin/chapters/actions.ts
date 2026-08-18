@@ -16,8 +16,14 @@ export async function createChapter(formData: FormData) {
     throw new Error("Missing or invalid fields");
   }
 
+  // A chapter's class/subject come from the course it's created under -
+  // Chapter itself doesn't require a course (see its model comment in
+  // schema.prisma), but this creation flow is specifically "add a chapter to
+  // this course", so it inherits that course's class/subject directly.
+  const course = await prisma.course.findUniqueOrThrow({ where: { id: courseId }, select: { classId: true, subjectId: true } });
+
   const chapter = await prisma.chapter.create({
-    data: { courseId, title, orderIndex, status: "DRAFT" },
+    data: { courseId, classId: course.classId, subjectId: course.subjectId, title, orderIndex, status: "DRAFT" },
   });
 
   revalidatePath(`/admin/courses/${courseId}`);
@@ -38,7 +44,7 @@ export async function updateChapter(formData: FormData) {
   });
 
   revalidatePath(`/admin/chapters/${id}`);
-  revalidatePath(`/admin/courses/${courseId}`);
+  if (courseId) revalidatePath(`/admin/courses/${courseId}`);
 }
 
 export async function deleteChapter(formData: FormData) {
@@ -48,6 +54,10 @@ export async function deleteChapter(formData: FormData) {
 
   await prisma.chapter.delete({ where: { id } });
 
-  revalidatePath(`/admin/courses/${courseId}`);
-  redirect(`/admin/courses/${courseId}`);
+  if (courseId) {
+    revalidatePath(`/admin/courses/${courseId}`);
+    redirect(`/admin/courses/${courseId}`);
+  }
+  revalidatePath("/admin/questions");
+  redirect("/admin/questions");
 }

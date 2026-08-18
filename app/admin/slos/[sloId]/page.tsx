@@ -5,27 +5,9 @@ import { ContentStatus } from "@/app/generated/prisma/enums";
 import type { BlockType } from "@/app/generated/prisma/enums";
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
 import { ContentBlockForm } from "@/components/admin/ContentBlockForm";
+import { ContentBlockList } from "@/components/admin/ContentBlockList";
 import { updateSlo, deleteSlo } from "../actions";
-import { createContentBlock, updateContentBlock, deleteContentBlock } from "../../content-blocks/actions";
-
-function blockPreview(blockType: BlockType, content: Record<string, unknown>): string {
-  switch (blockType) {
-    case "TEXT":
-      return String(content.text ?? "");
-    case "VIDEO":
-      return `YouTube: ${content.youtubeId ?? ""}`;
-    case "IMAGE":
-      return String(content.url ?? "");
-    case "FORMULA":
-      return String(content.latex ?? "");
-    case "WORKED_EXAMPLE":
-      return String(content.problem ?? "");
-    case "CALLOUT":
-      return String(content.text ?? "");
-    case "QUESTION":
-      return String(content.prompt ?? "");
-  }
-}
+import { createContentBlock, updateContentBlock, deleteContentBlock, reorderContentBlocks } from "../../content-blocks/actions";
 
 export default async function AdminSloDetailPage({
   params,
@@ -52,7 +34,7 @@ export default async function AdminSloDetailPage({
     <div className="flex flex-col gap-8">
       <div>
         <Link href={`/admin/topics/${slo.topicId}`} className="text-sm text-black/50 dark:text-white/50 hover:underline">
-          &larr; {slo.topic.chapter.course.title} / {slo.topic.chapter.title} / {slo.topic.title}
+          &larr; {slo.topic.chapter.course ? `${slo.topic.chapter.course.title} / ` : ""}{slo.topic.chapter.title} / {slo.topic.title}
         </Link>
         <h1 className="text-xl font-semibold mt-1">
           {slo.code} {slo.sloText}
@@ -113,44 +95,18 @@ export default async function AdminSloDetailPage({
         </h2>
         <p className="text-xs text-black/50 dark:text-white/50 mb-2">
           Includes inline comprehension questions (block type &quot;QUESTION&quot;) - place them wherever they help
-          clarify the explanation. These are separate from the SLO/unit/course test bank, which is built elsewhere.
+          clarify the explanation. These are separate from the question bank, managed from Admin &rarr; Questions:
+          they&apos;re not browsable/gradable for points on the Question Bank page, just shown in place within the
+          lesson.
         </p>
-        <div className="flex flex-col gap-2">
-          {slo.contentBlocks.map((block) => (
-            <details key={block.id} className="border border-black/10 dark:border-white/10 rounded p-4">
-              <summary className="cursor-pointer text-sm">
-                <span className="font-medium">
-                  {block.orderIndex}. {block.blockType}
-                </span>{" "}
-                <span className="text-black/50 dark:text-white/50">
-                  {blockPreview(block.blockType, block.content as Record<string, unknown>).slice(0, 80)}
-                </span>
-              </summary>
-              <div className="mt-4">
-                <ContentBlockForm
-                  owner={{ field: "sloId", id: slo.id }}
-                  action={updateContentBlock}
-                  initial={{
-                    id: block.id,
-                    blockType: block.blockType,
-                    orderIndex: block.orderIndex,
-                    content: block.content as Record<string, unknown>,
-                  }}
-                />
-                <form action={deleteContentBlock} className="mt-3">
-                  <input type="hidden" name="id" value={block.id} />
-                  <input type="hidden" name="sloId" value={slo.id} />
-                  <ConfirmSubmitButton confirmMessage="Delete this content block?" className="text-sm text-red-600 hover:underline">
-                    Delete block
-                  </ConfirmSubmitButton>
-                </form>
-              </div>
-            </details>
-          ))}
-          {slo.contentBlocks.length === 0 && (
-            <p className="text-sm text-black/50 dark:text-white/50">No content blocks yet.</p>
-          )}
-        </div>
+        <ContentBlockList
+          blocks={slo.contentBlocks.map((b) => ({ ...b, content: b.content as Record<string, unknown> }))}
+          owner={{ field: "sloId", id: slo.id }}
+          updateAction={updateContentBlock}
+          deleteAction={deleteContentBlock}
+          reorderAction={reorderContentBlocks}
+          emptyMessage="No content blocks yet."
+        />
 
         <details className="border border-black/10 dark:border-white/10 rounded p-4 mt-2">
           <summary className="cursor-pointer text-sm font-medium">Add a content block</summary>

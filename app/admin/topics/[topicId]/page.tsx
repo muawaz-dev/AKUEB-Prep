@@ -2,9 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ContentStatus } from "@/app/generated/prisma/enums";
+import type { BlockType } from "@/app/generated/prisma/enums";
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
+import { ContentBlockForm } from "@/components/admin/ContentBlockForm";
+import { ContentBlockList } from "@/components/admin/ContentBlockList";
 import { updateTopic, deleteTopic } from "../actions";
 import { createSlo } from "../../slos/actions";
+import { createContentBlock, updateContentBlock, deleteContentBlock, reorderContentBlocks } from "../../content-blocks/actions";
 
 export default async function AdminTopicDetailPage({
   params,
@@ -19,8 +23,9 @@ export default async function AdminTopicDetailPage({
       chapter: { include: { course: true } },
       slos: {
         orderBy: { orderIndex: "asc" },
-        include: { _count: { select: { contentBlocks: true, questions: true } } },
+        include: { _count: { select: { contentBlocks: true } } },
       },
+      contentBlocks: { orderBy: { orderIndex: "asc" } },
     },
   });
 
@@ -30,12 +35,15 @@ export default async function AdminTopicDetailPage({
     ? Math.max(...topic.slos.map((s) => s.orderIndex)) + 1
     : 1;
   const nextCode = `${topic.code}.${nextOrderIndex}`;
+  const nextBlockOrderIndex = topic.contentBlocks.length
+    ? Math.max(...topic.contentBlocks.map((b) => b.orderIndex)) + 1
+    : 1;
 
   return (
     <div className="flex flex-col gap-8">
       <div>
         <Link href={`/admin/chapters/${topic.chapterId}`} className="text-sm text-black/50 dark:text-white/50 hover:underline">
-          &larr; {topic.chapter.course.title} / {topic.chapter.title}
+          &larr; {topic.chapter.course ? `${topic.chapter.course.title} / ` : ""}{topic.chapter.title}
         </Link>
         <h1 className="text-xl font-semibold mt-1">
           {topic.code} {topic.title}
@@ -87,7 +95,7 @@ export default async function AdminTopicDetailPage({
                   {slo.code} {slo.sloText}
                 </span>
                 <span className="text-xs text-black/50 dark:text-white/50 whitespace-nowrap ml-4">
-                  {slo._count.contentBlocks} blocks - {slo._count.questions} qs - {slo.status}
+                  {slo._count.contentBlocks} blocks - {slo.status}
                 </span>
               </Link>
             </li>
@@ -96,6 +104,35 @@ export default async function AdminTopicDetailPage({
             <p className="text-sm text-black/50 dark:text-white/50">No SLOs yet.</p>
           )}
         </ul>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold mb-2 text-black/60 dark:text-white/60">
+          Topic test ({topic.contentBlocks.length} blocks)
+        </h2>
+        <p className="text-xs text-black/50 dark:text-white/50 mb-2">
+          Shown as a &quot;Test&quot; tab after this topic&rsquo;s SLOs on its lesson page - same content block
+          types as a lesson, but typically just QUESTION blocks.
+        </p>
+        <ContentBlockList
+          blocks={topic.contentBlocks.map((b) => ({ ...b, content: b.content as Record<string, unknown> }))}
+          owner={{ field: "topicId", id: topic.id }}
+          updateAction={updateContentBlock}
+          deleteAction={deleteContentBlock}
+          reorderAction={reorderContentBlocks}
+          emptyMessage="No test content yet."
+        />
+
+        <details className="border border-black/10 dark:border-white/10 rounded p-4 mt-2">
+          <summary className="cursor-pointer text-sm font-medium">Add a test question</summary>
+          <div className="mt-4">
+            <ContentBlockForm
+              owner={{ field: "topicId", id: topic.id }}
+              action={createContentBlock}
+              initial={{ id: "", blockType: "QUESTION" as BlockType, orderIndex: nextBlockOrderIndex, content: {} }}
+            />
+          </div>
+        </details>
       </div>
 
       <details className="border border-black/10 dark:border-white/10 rounded p-4">
@@ -128,7 +165,8 @@ export default async function AdminTopicDetailPage({
         <input type="hidden" name="id" value={topic.id} />
         <input type="hidden" name="chapterId" value={topic.chapterId} />
         <p className="text-xs text-black/50 dark:text-white/50 mb-2">
-          Deleting a topic deletes all its SLOs, content, and questions.
+          Deleting a topic deletes all its SLOs and content. Question bank entries are independent and aren&apos;t
+          affected.
         </p>
         <ConfirmSubmitButton
           confirmMessage={`Delete topic "${topic.title}" and everything inside it? This cannot be undone.`}

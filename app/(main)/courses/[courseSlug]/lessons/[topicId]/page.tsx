@@ -32,10 +32,12 @@ export default async function LessonPage({
           contentBlocks: { orderBy: { orderIndex: "asc" } },
         },
       },
+      contentBlocks: { orderBy: { orderIndex: "asc" } },
     },
   });
 
-  if (!topic || topic.chapter.course.slug !== courseSlug) notFound();
+  const course = topic?.chapter.course;
+  if (!topic || !course || course.slug !== courseSlug) notFound();
 
   const user = await getCurrentUser();
   const progressRows = user
@@ -56,7 +58,7 @@ export default async function LessonPage({
   const breadcrumb = (
     <>
       <Link href={`/courses/${courseSlug}`} className="hover:underline">
-        {topic.chapter.course.title}
+        {course.title}
       </Link>
       {" > "}
       <Link href={`/courses/${courseSlug}/units/${topic.chapterId}`} className="hover:underline">
@@ -81,6 +83,11 @@ export default async function LessonPage({
           blockType: b.blockType,
           content: b.content as Record<string, unknown>,
         })),
+      }))}
+      testContentBlocks={topic.contentBlocks.map((b) => ({
+        id: b.id,
+        blockType: b.blockType,
+        content: b.content as Record<string, unknown>,
       }))}
       prevTopic={prevTopic}
       nextTopic={nextTopic}

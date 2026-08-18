@@ -23,12 +23,13 @@ export default async function UnitPage({
     },
   });
 
-  if (!chapter || chapter.course.slug !== courseSlug) notFound();
+  const course = chapter?.course;
+  if (!chapter || !course || course.slug !== courseSlug) notFound();
 
   return (
     <UnitSidebar
       courseSlug={courseSlug}
-      courseTitle={chapter.course.title}
+      courseTitle={course.title}
       chapterId={chapterId}
       chapterTitle={chapter.title}
       chapterOrderIndex={chapter.orderIndex}

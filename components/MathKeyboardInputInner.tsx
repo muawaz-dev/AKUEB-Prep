@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MathfieldElement } from "mathlive";
+import katex from "katex";
 
 // This module is only ever loaded client-side (see MathKeyboardInput.tsx's
 // next/dynamic(..., { ssr: false }) wrapper), since mathlive's real
@@ -16,33 +17,42 @@ MathfieldElement.fontsDirectory = null;
 // `insert()` API, which understands `#0`/`#1` as placeholders and moves the
 // selection into the first one - so e.g. clicking √ drops the cursor inside
 // the radical automatically, no manual cursor-offset tracking needed.
-const KEY_BUTTONS: { label: string; latex: string }[] = [
-  { label: "x²", latex: "^2" },
-  { label: "xⁿ", latex: "^{#0}" },
-  { label: "√", latex: "\\sqrt{#0}" },
-  { label: "ⁿ√", latex: "\\sqrt[#0]{#1}" },
-  { label: "a/b", latex: "\\frac{#0}{#1}" },
-  { label: "π", latex: "\\pi" },
-  { label: "7", latex: "7" },
-  { label: "8", latex: "8" },
-  { label: "9", latex: "9" },
-  { label: "(", latex: "(" },
-  { label: ")", latex: ")" },
-  { label: "×", latex: "\\times" },
-  { label: "4", latex: "4" },
-  { label: "5", latex: "5" },
-  { label: "6", latex: "6" },
-  { label: "x", latex: "x" },
-  { label: "=", latex: "=" },
-  { label: "÷", latex: "\\div" },
-  { label: "1", latex: "1" },
-  { label: "2", latex: "2" },
-  { label: "3", latex: "3" },
-  { label: "+", latex: "+" },
-  { label: "−", latex: "-" },
-  { label: ".", latex: "." },
-  { label: "0", latex: "0" },
+// `display` is separate from `insert` because it's typeset as a standalone,
+// placeholder-free preview (e.g. showing `\sqrt{x}` for a key that actually
+// inserts `\sqrt{#0}`) via the same KaTeX renderer used for lesson content,
+// so every button reads as real math instead of a plain-text approximation.
+const KEY_BUTTONS: { display: string; insert: string }[] = [
+  { display: "x^2", insert: "^2" },
+  { display: "x^n", insert: "^{#0}" },
+  { display: "\\sqrt{x}", insert: "\\sqrt{#0}" },
+  { display: "\\sqrt[n]{x}", insert: "\\sqrt[#0]{#1}" },
+  { display: "\\frac{a}{b}", insert: "\\frac{#0}{#1}" },
+  { display: "\\pi", insert: "\\pi" },
+  { display: "i", insert: "i" },
+  { display: "7", insert: "7" },
+  { display: "8", insert: "8" },
+  { display: "9", insert: "9" },
+  { display: "(", insert: "(" },
+  { display: ")", insert: ")" },
+  { display: "\\times", insert: "\\times" },
+  { display: "4", insert: "4" },
+  { display: "5", insert: "5" },
+  { display: "6", insert: "6" },
+  { display: "x", insert: "x" },
+  { display: "=", insert: "=" },
+  { display: "\\div", insert: "\\div" },
+  { display: "1", insert: "1" },
+  { display: "2", insert: "2" },
+  { display: "3", insert: "3" },
+  { display: "+", insert: "+" },
+  { display: "-", insert: "-" },
+  { display: ".", insert: "." },
+  { display: "0", insert: "0" },
 ];
+
+function renderKeyMarkup(latex: string): string {
+  return katex.renderToString(latex, { throwOnError: false, output: "html" });
+}
 
 // A WYSIWYG math input backed by MathLive's <math-field>: it always shows
 // typeset math (never raw LaTeX source), and Backspace deletes structurally
@@ -145,13 +155,12 @@ export function MathKeyboardInput({
         <div className="absolute left-0 top-full mt-1 z-20 w-max grid grid-cols-6 gap-1 border border-black/20 dark:border-white/20 rounded p-2 bg-white dark:bg-black shadow-lg">
           {KEY_BUTTONS.map((key) => (
             <button
-              key={key.label}
+              key={key.display}
               type="button"
-              onClick={() => insert(key.latex)}
+              onClick={() => insert(key.insert)}
               className="rounded border border-black/10 dark:border-white/10 py-1.5 px-2 text-sm hover:bg-black/5 dark:hover:bg-white/10"
-            >
-              {key.label}
-            </button>
+              dangerouslySetInnerHTML={{ __html: renderKeyMarkup(key.display) }}
+            />
           ))}
           <button
             type="button"

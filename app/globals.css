@@ -106,3 +106,18 @@ body {
 .prose-content > *:first-child {
   margin-top: 0;
 }
+
+/* Gold-foil sweep across an achieved GemBadge (see components/profile/Badge) -
+   diagonal so it reads as a light glint across a gem facet rather than a
+   plain left-to-right wipe. */
+@keyframes shimmer {
+  0% {
+    transform: translate(-120%, -120%) rotate(20deg);
+  }
+  100% {
+    transform: translate(120%, 120%) rotate(20deg);
+  }
+}
+.animate-shimmer {
+  animation: shimmer 2.5s ease-in-out infinite;
+}

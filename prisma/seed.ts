@@ -63,18 +63,23 @@ async function seedCourse(courseDef: (typeof COURSES)[number]) {
       cognitive_level: r[6],
     }));
 
+  const [cls, subject] = await Promise.all([
+    prisma.class.upsert({ where: { level: courseDef.classLevel }, update: {}, create: { level: courseDef.classLevel } }),
+    prisma.subject.upsert({ where: { name: courseDef.subject }, update: {}, create: { name: courseDef.subject } }),
+  ]);
+
   const course = await prisma.course.upsert({
     where: { slug: courseDef.slug },
     update: {
       title: courseDef.title,
-      classLevel: courseDef.classLevel,
-      subject: courseDef.subject,
+      classId: cls.id,
+      subjectId: subject.id,
     },
     create: {
       slug: courseDef.slug,
       title: courseDef.title,
-      classLevel: courseDef.classLevel,
-      subject: courseDef.subject,
+      classId: cls.id,
+      subjectId: subject.id,
       status: "DRAFT",
     },
   });
@@ -94,6 +99,8 @@ async function seedCourse(courseDef: (typeof COURSES)[number]) {
         update: { title: row.chapter_title },
         create: {
           courseId: course.id,
+          classId: course.classId,
+          subjectId: course.subjectId,
           orderIndex: chapterOrder,
           title: row.chapter_title,
           status: "DRAFT",

@@ -15,8 +15,9 @@ type BlockContent = {
   questionType?: QuestionType;
   prompt?: string;
   explanation?: string;
-  choices?: string[];
-  correctIndex?: number;
+  imageUrl?: string;
+  imageAlt?: string;
+  mcqQuestions?: { text: string; choices: string[]; correctIndex: number; explanation?: string }[];
   answer?: number;
   tolerance?: number;
   acceptedAnswers?: string[];
@@ -37,7 +38,11 @@ export function ContentBlockView({
     case "VIDEO":
       return (
         <figure className="flex flex-col gap-6 mt-6">
-          {content.title && <div className="text-center text-heading font-bold">{content.title}</div>}
+          {content.title && (
+            <div className="text-center text-heading font-bold">
+              <MarkdownContent text={content.title} inline />
+            </div>
+          )}
           <div className="aspect-video w-full">
             <iframe
               className="h-full w-full rounded"
@@ -47,7 +52,9 @@ export function ContentBlockView({
             />
           </div>
           {content.caption && (
-            <figcaption className="text-sm text-black/60 dark:text-white/60">{content.caption}</figcaption>
+            <figcaption className="text-sm text-black/60 dark:text-white/60">
+              <MarkdownContent text={content.caption} inline />
+            </figcaption>
           )}
         </figure>
       );
@@ -55,11 +62,17 @@ export function ContentBlockView({
     case "IMAGE":
       return (
         <figure className="flex flex-col gap-6 mt-6">
-          {content.title && <div className="text-center text-heading font-bold">{content.title}</div>}
+          {content.title && (
+            <div className="text-center text-heading font-bold">
+              <MarkdownContent text={content.title} inline />
+            </div>
+          )}
           {/* eslint-disable-next-line @next/next/no-img-element -- admin-supplied external URLs, not local optimized assets */}
           <img src={content.url} alt={content.alt ?? ""} className="rounded max-w-full" />
           {content.caption && (
-            <figcaption className="text-sm text-black/60 dark:text-white/60">{content.caption}</figcaption>
+            <figcaption className="text-sm text-black/60 dark:text-white/60">
+              <MarkdownContent text={content.caption} inline />
+            </figcaption>
           )}
         </figure>
       );
@@ -71,7 +84,9 @@ export function ContentBlockView({
             <MarkdownContent text={`$$${content.latex ?? ""}$$`} />
           </div>
           {content.caption && (
-            <figcaption className="text-sm text-black/60 dark:text-white/60">{content.caption}</figcaption>
+            <figcaption className="text-sm text-black/60 dark:text-white/60">
+              <MarkdownContent text={content.caption} inline />
+            </figcaption>
           )}
         </figure>
       );
@@ -98,7 +113,11 @@ export function ContentBlockView({
     case "CALLOUT":
       return (
         <div className="border-l-4 border-black/30 dark:border-white/30 bg-black/5 dark:bg-white/10 rounded-r px-4 py-3">
-          {content.title && <div className="font-semibold mb-1">{content.title}</div>}
+          {content.title && (
+            <div className="font-semibold mb-1">
+              <MarkdownContent text={content.title} inline />
+            </div>
+          )}
           <MarkdownContent text={content.text ?? ""} />
         </div>
       );
@@ -108,6 +127,8 @@ export function ContentBlockView({
         <QuestionWidget
           type={content.questionType ?? "MCQ"}
           title={content.title}
+          imageUrl={content.imageUrl}
+          imageAlt={content.imageAlt}
           prompt={content.prompt ?? ""}
           data={content}
           explanation={content.explanation ?? null}

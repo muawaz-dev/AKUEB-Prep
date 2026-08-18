@@ -17,6 +17,10 @@ type SloData = {
 
 type SiblingTopic = { id: string; code: string; title: string };
 
+// Sentinel selection id for the topic-wide test tab, appended after the SLO
+// list - distinct from any real Slo.id (cuids never look like this).
+const TEST_TAB_ID = "__test__";
+
 function ArrowIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
@@ -39,6 +43,7 @@ export function LessonView({
   topicCode,
   topicTitle,
   slos,
+  testContentBlocks,
   prevTopic,
   nextTopic,
   isLoggedIn,
@@ -49,6 +54,7 @@ export function LessonView({
   topicCode: string;
   topicTitle: string;
   slos: SloData[];
+  testContentBlocks: { id: string; blockType: BlockType; content: Record<string, unknown> }[];
   prevTopic: SiblingTopic | null;
   nextTopic: SiblingTopic | null;
   isLoggedIn: boolean;
@@ -58,9 +64,11 @@ export function LessonView({
   const [progress, setProgress] = useState(initialProgress);
   const [sloNavOpen, setSloNavOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const selected = slos.find((s) => s.id === selectedId) ?? slos[0];
+  const isTestSelected = selectedId === TEST_TAB_ID;
+  const selected = isTestSelected ? undefined : (slos.find((s) => s.id === selectedId) ?? slos[0]);
 
   // Mark the currently viewed SLO as in-progress the first time it's opened.
+  // Skipped entirely while viewing the test tab (selected is undefined then).
   useEffect(() => {
     if (!isLoggedIn || !selected) return;
     const current = progress[selected.id] ?? "NOT_STARTED";
@@ -172,6 +180,22 @@ export function LessonView({
               </li>
             );
           })}
+          <li>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedId(TEST_TAB_ID);
+                setSloNavOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left border-l-2 ${
+                isTestSelected
+                  ? "border-black dark:border-white bg-black/5 dark:bg-white/10"
+                  : "border-transparent hover:bg-black/5 dark:hover:bg-white/5"
+              }`}
+            >
+              <span className="text-base font-medium text-black/80 dark:text-white/80">Test</span>
+            </button>
+          </li>
         </ul>
       </aside>
 
@@ -191,7 +215,28 @@ export function LessonView({
         )}
 
         <div className="max-w-4xl mx-auto w-full p-8 flex flex-col gap-6">
-          {selected ? (
+          {isTestSelected ? (
+            <>
+              <h1 className="text-3xl font-semibold">Topic {topicCode} Test</h1>
+              <div className="flex flex-col">
+                {testContentBlocks.map((block, i) => (
+                  <div
+                    key={block.id}
+                    className={
+                      i < testContentBlocks.length - 1
+                        ? "pb-8 mb-8 border-b-2 border-black/10 dark:border-white/10"
+                        : ""
+                    }
+                  >
+                    <ContentBlockView blockType={block.blockType} content={block.content} />
+                  </div>
+                ))}
+                {testContentBlocks.length === 0 && (
+                  <p className="text-base text-black/40 dark:text-white/40">No test content yet for this topic.</p>
+                )}
+              </div>
+            </>
+          ) : selected ? (
             <>
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                 <div>
