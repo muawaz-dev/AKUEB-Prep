@@ -4,29 +4,49 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { pointsForAttempt } from "@/lib/points";
+import { checkAnswer, type Submission, type CheckResult } from "@/lib/answerChecking";
+import type { QuestionType } from "@/app/generated/prisma/enums";
 
-// Called whenever a Question-bank entry's check comes back correct.
-// Logged-out callers just no-op here; already-solved questions are left
-// untouched since a question can only ever be solved (and scored) once
-// per user.
-export async function recordSolvedQuestion(questionId: string, firstTryCorrect: boolean) {
+// The single source of truth for "is this answer right", and the only path
+// that can ever mark a question solved. Grades server-side against the
+// stored answer key (never sent to the browser - see lib/questionDto.ts),
+// then - only if that grading says correct, the caller is logged in, and
+// this question hasn't already been solved by them - records the solve and
+// awards points. A client can no longer claim a solve just by calling an
+// action with a hand-picked boolean; it has to supply an answer that
+// actually grades correct.
+export async function checkQuestionAnswer(
+  questionId: string,
+  type: QuestionType,
+  submission: Submission,
+  hadWrongAttempt: boolean
+): Promise<{ result: CheckResult; explanation: string | null; solved: { pointsAwarded: number } | null }> {
+  const question = await prisma.question.findUnique({
+    where: { id: questionId, status: "PUBLISHED" },
+    select: { type: true, data: true, difficulty: true, explanation: true },
+  });
+  if (!question || question.type !== type) throw new Error("Question not found");
+
+  const result = checkAnswer(type, question.data as Record<string, unknown>, submission);
+
+  if (!result.correct) {
+    return { result, explanation: null, solved: null };
+  }
+
   const user = await getCurrentUser();
-  if (!user) return { ok: false as const };
+  if (!user) return { result, explanation: question.explanation, solved: null };
 
   const existing = await prisma.solvedQuestion.findUnique({
     where: { userId_questionId: { userId: user.id, questionId } },
   });
-  if (existing) return { ok: true as const, alreadySolved: true as const, pointsAwarded: 0 };
+  if (existing) return { result, explanation: question.explanation, solved: null };
 
-  const question = await prisma.question.findUnique({
-    where: { id: questionId },
-    select: { difficulty: true },
-  });
-  if (!question) return { ok: false as const };
-
-  // Re-reads difficulty from the stored question rather than trusting a
-  // client-supplied value, so points can't be inflated by claiming a
-  // harder difficulty than the question was actually authored at.
+  // Re-derived from difficulty stored on the question rather than trusting a
+  // client-supplied value, so points can't be inflated by claiming a harder
+  // difficulty than the question was actually authored at. `hadWrongAttempt`
+  // itself stays client-tracked (it only tiers the point award between full
+  // and half credit, not whether the solve is recorded at all).
+  const firstTryCorrect = !hadWrongAttempt;
   const pointsAwarded = pointsForAttempt(question.difficulty, firstTryCorrect);
 
   await prisma.solvedQuestion.create({
@@ -36,5 +56,5 @@ export async function recordSolvedQuestion(questionId: string, firstTryCorrect: 
   revalidatePath("/profile");
   revalidatePath("/question-bank");
 
-  return { ok: true as const, alreadySolved: false as const, pointsAwarded };
+  return { result, explanation: question.explanation, solved: { pointsAwarded } };
 }

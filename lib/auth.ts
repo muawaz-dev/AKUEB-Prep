@@ -24,10 +24,15 @@ export async function getCurrentUser() {
 
   // First time we've seen this Supabase-authenticated user - create their
   // local profile row so UserProgress/TestAttempt foreign keys work as
-  // normal Prisma relations.
+  // normal Prisma relations. Upsert (not create) because layout and page
+  // Server Components both call getCurrentUser() in parallel for the same
+  // request, and two concurrent creates for the same id would otherwise
+  // race and throw a unique constraint error.
   const metadata = data.claims.user_metadata as { name?: string; full_name?: string } | undefined;
-  return prisma.user.create({
-    data: { id, email, name: metadata?.name ?? metadata?.full_name ?? null },
+  return prisma.user.upsert({
+    where: { id },
+    create: { id, email, name: metadata?.name ?? metadata?.full_name ?? null },
+    update: {},
     select: PROFILE_SELECT,
   });
 }

@@ -52,7 +52,11 @@ export function toQuestionDto(q: RawQuestion): QuestionDTO {
     imageAlt: q.imageAlt,
     prompt: q.prompt,
     data: toWidgetData(q.type, q.data as Record<string, unknown>),
-    explanation: q.explanation,
+    // Withheld until a real check happens (see checkQuestionAnswer in
+    // app/question-bank/actions.ts) - explanation text almost always states
+    // the correct answer directly, so shipping it upfront would defeat the
+    // point of stripping the answer key out of `data` above.
+    explanation: null,
     breadcrumb: breadcrumbParts.join(" / "),
   };
 }
