@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
 import { logoutAction } from "@/app/auth/actions";
 import { ThemeToggle } from "./ThemeToggle";
@@ -7,10 +8,16 @@ export async function SiteHeader() {
   const user = await getCurrentUser();
 
   return (
-    <header className="h-14 border-b border-white/10 sticky top-0 bg-brand text-white z-20">
+    <header className="h-18 border-b border-white/10 sticky top-0 bg-brand text-white z-20">
       <div className="max-w-5xl mx-auto w-full h-full px-6 flex items-center justify-between">
         <Link href="/courses" className="text-lg font-semibold">
-          AKUEB Maths
+          <Image
+          src="/logo.png" 
+          alt="Logo"
+          width={400}
+          height={400}
+          className="h-24 w-auto"
+          />
         </Link>
         <div className="flex items-center gap-4">
           {user ? (

@@ -12,34 +12,38 @@ export default async function LessonPage({
 }) {
   const { courseSlug, topicId } = await params;
 
-  const topic = await prisma.topic.findFirst({
-    where: { id: topicId, status: "PUBLISHED" },
-    include: {
-      chapter: {
-        include: {
-          course: true,
-          topics: {
-            where: { status: "PUBLISHED" },
-            orderBy: { orderIndex: "asc" },
-            select: { id: true, code: true, title: true, orderIndex: true },
+  // getCurrentUser() doesn't depend on the topic lookup (or vice versa), so
+  // run them concurrently instead of stacking two sequential round-trips.
+  const [topic, user] = await Promise.all([
+    prisma.topic.findFirst({
+      where: { id: topicId, status: "PUBLISHED" },
+      include: {
+        chapter: {
+          include: {
+            course: true,
+            topics: {
+              where: { status: "PUBLISHED" },
+              orderBy: { orderIndex: "asc" },
+              select: { id: true, code: true, title: true, orderIndex: true },
+            },
           },
         },
-      },
-      slos: {
-        where: { status: "PUBLISHED" },
-        orderBy: { orderIndex: "asc" },
-        include: {
-          contentBlocks: { orderBy: { orderIndex: "asc" } },
+        slos: {
+          where: { status: "PUBLISHED" },
+          orderBy: { orderIndex: "asc" },
+          include: {
+            contentBlocks: { orderBy: { orderIndex: "asc" } },
+          },
         },
+        contentBlocks: { orderBy: { orderIndex: "asc" } },
       },
-      contentBlocks: { orderBy: { orderIndex: "asc" } },
-    },
-  });
+    }),
+    getCurrentUser(),
+  ]);
 
   const course = topic?.chapter.course;
   if (!topic || !course || course.slug !== courseSlug) notFound();
 
-  const user = await getCurrentUser();
   const progressRows = user
     ? await prisma.userProgress.findMany({
         where: { userId: user.id, sloId: { in: topic.slos.map((s) => s.id) } },

@@ -27,6 +27,7 @@ export async function createChapter(formData: FormData) {
   });
 
   revalidatePath(`/admin/courses/${courseId}`);
+  revalidatePath("/question-bank", "layout");
   redirect(`/admin/chapters/${chapter.id}`);
 }
 
@@ -45,6 +46,7 @@ export async function updateChapter(formData: FormData) {
 
   revalidatePath(`/admin/chapters/${id}`);
   if (courseId) revalidatePath(`/admin/courses/${courseId}`);
+  revalidatePath("/question-bank", "layout");
 }
 
 export async function deleteChapter(formData: FormData) {
@@ -54,6 +56,7 @@ export async function deleteChapter(formData: FormData) {
 
   await prisma.chapter.delete({ where: { id } });
 
+  revalidatePath("/question-bank", "layout");
   if (courseId) {
     revalidatePath(`/admin/courses/${courseId}`);
     redirect(`/admin/courses/${courseId}`);

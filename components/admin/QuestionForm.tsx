@@ -94,7 +94,11 @@ export function QuestionForm({
     setStatements((prev) => [...prev, { text: "", isTrue: true, explanation: "" }]);
   }
 
-  const [statementText, setStatementText] = useState(data.statementText ?? "");
+  // Older saved questions only have `segments` (statementText wasn't persisted
+  // until this was fixed) - rejoin them so those records don't show empty.
+  const [statementText, setStatementText] = useState(
+    data.statementText ?? data.segments?.join("___") ?? ""
+  );
   const [blanks, setBlanks] = useState<BlankConfig[]>(
     resizeBlanks(data.blanks ?? [], countBlanks(data.statementText ?? ""))
   );

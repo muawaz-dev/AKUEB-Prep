@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { UPDATES } from "@/lib/updates";
 import { WHATS_NEXT } from "@/lib/whatsNext";
-
+import { Footer } from "@/components/Footer";
 function FeatureCard({ title, text }: { title: string; text: string }) {
   return (
     <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] p-6">
@@ -16,23 +16,24 @@ export default async function HomePage() {
   const user = await getCurrentUser();
 
   return (
+    <div>
+
     <div className="flex flex-col">
       {/* Hero */}
       <section className="max-w-6xl mx-auto w-full px-8 pt-20 pb-16 flex flex-col gap-4">
         <p className="text-sm font-medium text-brand dark:text-blue-400">
-          {user ? `Welcome back${user.name ? `, ${user.name}` : ""}` : "AKU-EB Maths"}
+          {user ? `Welcome back${user.name ? `, ${user.name}` : ""}` : "AKUEB Prep"}
         </p>
-        <h1 className="text-4xl sm:text-5xl font-semibold">Resources For Agha Khan Board Students</h1>
+        <h1 className="text-4xl sm:text-5xl font-semibold">AKUEB Past Papers & Practice Questions</h1>
         <p className="text-lg text-black/60 dark:text-white/60 max-w-prose">
-          AKU-EB Maths is a free learning platform built for students studying the Agha Khan
-          Board syllabus - structured lessons, practice questions, and progress tracking, all
-          in one place.
+          AKUEB Prep is a free question bank built for AKU-EB students - chapter-wise MCQs and
+          past papers you can practice online, graded instantly, with progress tracking built in.
         </p>
         <Link
-          href="/courses"
+          href="/question-bank"
           className="mt-3 w-fit bg-brand text-white rounded px-5 py-2.5 text-base font-medium hover:bg-brand/90"
         >
-          Browse Courses
+          Open the Question Bank
         </Link>
       </section>
 
@@ -42,16 +43,16 @@ export default async function HomePage() {
           <h2 className="text-2xl font-semibold mb-8">What you&apos;ll find here</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <FeatureCard
-              title="Lesson-by-lesson courses"
-              text="Structured units and topics that follow the AKU-EB syllabus."
+              title="Chapter-wise practice"
+              text="MCQs and other question types for every chapter, filterable by topic and difficulty."
             />
             <FeatureCard
-              title="Practice questions"
-              text="Check your understanding as you go, with instant feedback."
+              title="Past papers"
+              text="Work through real AKU-EB past papers online, with instant grading instead of a plain PDF."
             />
             <FeatureCard
               title="Progress tracking"
-              text="See what you've completed and pick up right where you left off."
+              text="See what you've solved and pick up right where you left off."
             />
           </div>
         </div>
@@ -100,17 +101,19 @@ export default async function HomePage() {
       <section className="border-t border-black/10 dark:border-white/10 bg-brand text-white">
         <div className="max-w-6xl mx-auto w-full px-8 py-14 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold">Ready to start?</h2>
-            <p className="text-base text-white/70 mt-1">Jump into your courses and pick up where you left off.</p>
+            <h2 className="text-2xl font-semibold">Ready to practice?</h2>
+            <p className="text-base text-white/70 mt-1">Jump into the question bank and pick up where you left off.</p>
           </div>
           <Link
-            href="/courses"
+            href="/question-bank"
             className="w-fit bg-white text-brand rounded px-5 py-2.5 text-base font-medium hover:bg-white/90"
           >
-            Browse Courses
+            Open the Question Bank
           </Link>
         </div>
       </section>
+    </div>
+      <Footer/>
     </div>
   );
 }

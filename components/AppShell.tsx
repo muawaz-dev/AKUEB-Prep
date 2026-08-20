@@ -43,7 +43,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="lg:hidden sticky top-14 z-10 bg-white dark:bg-black border-b border-black/10 dark:border-white/10">
+      <div className="lg:hidden sticky top-18 z-10 bg-white dark:bg-black border-b border-black/10 dark:border-white/10">
         <button
           type="button"
           onClick={() => setMobileNavOpen((open) => !open)}

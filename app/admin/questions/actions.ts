@@ -49,7 +49,8 @@ function buildQuestionData(type: QuestionType, formData: FormData): Prisma.Input
       return { statements };
     }
     case "FILL_IN_BLANK": {
-      const segments = field(formData, "blankStatement").split(/_{3,}/g);
+      const statementText = field(formData, "blankStatement");
+      const segments = statementText.split(/_{3,}/g);
       const optionsPerBlank = formData.getAll("blankOptions").map(String);
       const answers = formData.getAll("blankAnswer").map(String);
       const blanks = answers.map((answer, i) => ({
@@ -59,7 +60,7 @@ function buildQuestionData(type: QuestionType, formData: FormData): Prisma.Input
           .filter(Boolean),
         answer: answer.trim(),
       }));
-      return { segments, blanks };
+      return { statementText, segments, blanks };
     }
   }
 }
@@ -212,6 +213,7 @@ export async function createQuestion(formData: FormData) {
   });
 
   revalidatePath("/admin/questions");
+  revalidatePath("/question-bank", "layout");
 }
 
 export async function updateQuestion(formData: FormData) {
@@ -248,6 +250,7 @@ export async function updateQuestion(formData: FormData) {
   });
 
   revalidatePath("/admin/questions");
+  revalidatePath("/question-bank", "layout");
 }
 
 export async function deleteQuestion(formData: FormData) {
@@ -257,4 +260,5 @@ export async function deleteQuestion(formData: FormData) {
   await prisma.question.delete({ where: { id } });
 
   revalidatePath("/admin/questions");
+  revalidatePath("/question-bank", "layout");
 }

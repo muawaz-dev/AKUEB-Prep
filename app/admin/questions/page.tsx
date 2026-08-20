@@ -13,29 +13,6 @@ export default async function AdminQuestionsPage({
 }) {
   const params = await searchParams;
 
-  // Every status (including drafts), sourced from the real curriculum tables
-  // directly - this is the authoring view, so it must show everything
-  // available for tagging, not just what's already used on a question.
-  const chapters = await prisma.chapter.findMany({
-    select: {
-      id: true,
-      title: true,
-      orderIndex: true,
-      class: { select: { id: true, level: true } },
-      subject: { select: { id: true, name: true } },
-      topics: {
-        select: {
-          id: true,
-          code: true,
-          title: true,
-          orderIndex: true,
-          slos: { select: { id: true, code: true, orderIndex: true } },
-        },
-      },
-    },
-  });
-  const classes = buildCurriculumTree(chapters);
-
   const where: Prisma.QuestionWhereInput = {};
   if (params.classId) where.classId = params.classId;
   if (params.subjectId) where.subjectId = params.subjectId;
@@ -43,17 +20,43 @@ export default async function AdminQuestionsPage({
   if (params.topicId) where.topicId = params.topicId;
   if (params.sloId) where.sloId = params.sloId;
 
-  const questions = await prisma.question.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    include: {
-      class: true,
-      subject: true,
-      chapter: true,
-      topic: true,
-      slo: true,
-    },
-  });
+  // Neither query depends on the other's result, so run them concurrently.
+  const [chapters, questions] = await Promise.all([
+    // Every status (including drafts), sourced from the real curriculum
+    // tables directly - this is the authoring view, so it must show
+    // everything available for tagging, not just what's already used on a
+    // question.
+    prisma.chapter.findMany({
+      select: {
+        id: true,
+        title: true,
+        orderIndex: true,
+        class: { select: { id: true, level: true } },
+        subject: { select: { id: true, name: true } },
+        topics: {
+          select: {
+            id: true,
+            code: true,
+            title: true,
+            orderIndex: true,
+            slos: { select: { id: true, code: true, orderIndex: true } },
+          },
+        },
+      },
+    }),
+    prisma.question.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        class: true,
+        subject: true,
+        chapter: true,
+        topic: true,
+        slo: true,
+      },
+    }),
+  ]);
+  const classes = buildCurriculumTree(chapters);
 
   return (
     <div className="flex flex-col gap-8">

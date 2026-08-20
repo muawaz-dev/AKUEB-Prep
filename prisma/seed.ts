@@ -28,6 +28,13 @@ const COURSES = [
     classLevel: 11,
     subject: "Mathematics",
   },
+  {
+    file: "akueb_hssc1_physics_slo.csv",
+    slug: "hssc1-physics",
+    title: "HSSC Part 1 - Physics",
+    classLevel: 11,
+    subject: "Physics",
+  },
 ];
 
 // The source CSV has a handful of rows where slo_text contains an unquoted

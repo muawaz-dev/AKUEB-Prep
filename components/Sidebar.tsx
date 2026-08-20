@@ -92,7 +92,7 @@ export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onColla
 
   return (
     <aside
-      className={`shrink-0 hidden lg:block sticky top-14 h-[calc(100dvh-3.5rem)] overflow-hidden transition-[width] duration-300 ease-in-out ${
+      className={`shrink-0 hidden lg:block sticky top-18 h-[calc(100dvh-3.5rem)] overflow-hidden transition-[width] duration-300 ease-in-out ${
         collapsed ? "w-0" : "w-60"
       }`}
     >
