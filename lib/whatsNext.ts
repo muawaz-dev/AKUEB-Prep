@@ -2,15 +2,11 @@
 // roadmap changes - each entry is just a title and a short description.
 export const WHATS_NEXT: { title: string; text: string }[] = [
   {
-    title: "More courses",
-    text: "Additional AKU-EB subjects and class levels beyond the current Maths course.",
+    title: "Courses",
+    text: "Math course for HSCC-1 is underway.",
   },
   {
     title: "Profile & progress dashboard",
-    text: "One place to see your overall progress across every course, plus account settings.",
-  },
-  {
-    title: "About page",
-    text: "Background on the project and how the content is put together.",
-  },
+    text: "The profile page will be improved further to track progress better.",
+  }
 ];

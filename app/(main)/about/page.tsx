@@ -25,6 +25,71 @@ function MailIcon({ className }: { className?: string }) {
   );
 }
 
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5" />
+      <circle cx="12" cy="12" r="4.2" />
+      <circle cx="17.4" cy="6.6" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function MessageCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
+      <path
+        d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function HelpCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9.5" />
+      <path
+        d="M9.3 9.3a2.7 2.7 0 1 1 3.9 2.4c-.8.4-1.2.9-1.2 1.8v.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="17.2" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function HandPenIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M5.5 11.5h5.5a2 2 0 0 1 2 2v2a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-2.5" />
+      <path d="M5.5 11.5V9a1.4 1.4 0 0 1 2.8 0v2" />
+      <path d="M13 12.5 20 5.5l1.5 1.5-7 7" />
+    </svg>
+  );
+}
+
+function LayersIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
+      <path d="M12 3 3 8l9 5 9-5-9-5Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="m3 12 9 5 9-5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="m3 16 9 5 9-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function CompassIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
@@ -39,23 +104,6 @@ function CheckCircleIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
       <circle cx="12" cy="12" r="9.5" />
       <path d="m8 12.5 2.5 2.5L16.5 9" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function LightbulbIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
-      <path d="M9 18h6M10 21h4M7 9a5 5 0 1 1 8.5 3.6c-.7.7-1.5 1.5-1.5 2.9v.5h-6v-.5c0-1.4-.8-2.2-1.5-2.9A5 5 0 0 1 7 9Z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function TrophyIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
-      <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" strokeLinejoin="round" />
-      <path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3M12 14v3M9 21h6M9.5 17.5h5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -78,10 +126,22 @@ function GraduationCapIcon({ className }: { className?: string }) {
   );
 }
 
-function SectionHeading({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function SectionHeading({
+  icon,
+  children,
+  invert,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  invert?: boolean;
+}) {
   return (
     <div className="flex items-center gap-3">
-      <span className="shrink-0 w-9 h-9 rounded-lg bg-brand/10 text-brand dark:bg-blue-400/10 dark:text-blue-400 flex items-center justify-center">
+      <span
+        className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
+          invert ? "bg-white/15 text-white" : "bg-brand/10 text-brand dark:bg-blue-400/10 dark:text-blue-400"
+        }`}
+      >
         {icon}
       </span>
       <h2 className="text-2xl font-semibold">{children}</h2>
@@ -89,40 +149,26 @@ function SectionHeading({ icon, children }: { icon: React.ReactNode; children: R
   );
 }
 
-const FEATURES: {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-  wrap: string;
-  ic: string;
-}[] = [
+const FEATURES: { icon: React.ReactNode; title: string; text: string }[] = [
   {
     icon: <CheckCircleIcon className="w-5 h-5" />,
     title: "Instant, automatic grading",
     text: "MCQs, numeric answers, true/false, and fill-in-the-blanks are all graded the second you submit - no waiting, no flipping to an answer key at the back of a PDF.",
-    wrap: "bg-blue-600/10 dark:bg-blue-400/10",
-    ic: "text-blue-600 dark:text-blue-400",
   },
   {
-    icon: <LightbulbIcon className="w-5 h-5" />,
+    icon: <HandPenIcon className="w-5 h-5" />,
     title: "Hand-checked explanations",
     text: "Every explanation is written and reviewed by hand against the AKU-EB syllabus, not auto-generated - so it actually explains the reasoning, not just the answer.",
-    wrap: "bg-amber-500/10 dark:bg-amber-400/10",
-    ic: "text-amber-600 dark:text-amber-400",
   },
   {
-    icon: <TrophyIcon className="w-5 h-5" />,
-    title: "Points that reward first tries",
-    text: "Questions are worth points based on difficulty. A first-try correct answer earns full points, a retry earns half - so practice pays off without rewarding guessing.",
-    wrap: "bg-violet-600/10 dark:bg-violet-400/10",
-    ic: "text-violet-600 dark:text-violet-400",
+    icon: <LayersIcon className="w-5 h-5" />,
+    title: "All your prep in one place",
+    text: "Lessons, chapter-wise practice, and past papers all live on one platform - no juggling scattered PDFs, answer keys, and separate trackers.",
   },
   {
     icon: <TrendingUpIcon className="w-5 h-5" />,
     title: "Progress that carries forward",
     text: "Solved questions and points roll into your profile, so you always know which chapters are strong and which still need work.",
-    wrap: "bg-emerald-600/10 dark:bg-emerald-400/10",
-    ic: "text-emerald-600 dark:text-emerald-400",
   },
 ];
 
@@ -130,17 +176,17 @@ export default function AboutPage() {
   return (
     <div className="flex flex-col">
       {/* Hero */}
-      <section className="bg-brand text-white">
-        <div className="max-w-4xl mx-auto w-full px-8 pt-20 pb-16 flex flex-col gap-4">
-          <p className="text-sm font-medium text-blue-300">About AKUEB Prep</p>
+      <section>
+        <div className="max-w-4xl mx-auto w-full px-8 pt-24 pb-20 flex flex-col gap-5">
+          <p className="text-sm font-medium text-brand dark:text-blue-400">About AKUEB Prep</p>
           <h1 className="text-4xl sm:text-5xl font-semibold">Built to make AKU-EB practice actually work</h1>
-          <p className="text-lg text-white/70 max-w-prose">
+          <p className="text-lg text-black/60 dark:text-white/60 max-w-prose">
             A free, student-built question bank for AKU-EB students - solve chapter-wise questions
             and past papers online, get graded instantly, and watch your progress add up.
           </p>
           <Link
             href="/question-bank"
-            className="mt-3 w-fit bg-white text-brand rounded px-5 py-2.5 text-base font-medium hover:bg-white/90"
+            className="mt-3 w-fit bg-brand text-white rounded px-5 py-2.5 text-base font-medium hover:bg-brand/90"
           >
             Open the Question Bank
           </Link>
@@ -148,37 +194,42 @@ export default function AboutPage() {
       </section>
 
       {/* Mission */}
-      <section className="max-w-4xl mx-auto w-full px-8 py-16 flex flex-col gap-4">
-        <SectionHeading icon={<CompassIcon className="w-5 h-5" />}>Why we built this</SectionHeading>
-        <p className="text-base text-black/70 dark:text-white/70">
-          AKU-EB students prepare mostly from scanned past papers and static PDFs. You solve a
-          question, flip to the back for the answer, and move on - there&apos;s no feedback on
-          why an answer is right, no sense of which chapters are weak, and no record of what
-          you&apos;ve already covered.
-        </p>
-        <div className="rounded-xl border-l-4 border-brand dark:border-blue-400 bg-brand/5 dark:bg-blue-400/5 p-5">
-          <p className="text-base text-black/80 dark:text-white/80">
-            AKUEB Prep turns that into something you can actually practice with - built specifically
-            for the AKU-EB syllabus, free to use, and made by a student sitting the same exams.
+      <section className="border-t border-black/10 dark:border-white/10">
+        <div className="max-w-4xl mx-auto w-full px-8 py-20 flex flex-col gap-5">
+          <SectionHeading icon={<CompassIcon className="w-5 h-5" />}>Why we built this</SectionHeading>
+          <p className="text-base text-black/70 dark:text-white/70">
+            AKU-EB students prepare mostly from scanned past papers and static PDFs. You solve a
+            question, flip to the back for the answer, and move on - there&apos;s no feedback on
+            why an answer is right, no sense of which chapters are weak, and no record of what
+            you&apos;ve already covered.
           </p>
+          <div className="rounded-xl border-l-4 border-brand dark:border-blue-400 bg-brand/5 dark:bg-blue-400/5 p-5">
+            <p className="text-base text-black/80 dark:text-white/80">
+              AKUEB Prep turns that into something you can actually practice with - built
+              specifically for the AKU-EB syllabus, free to use, and made by a student sitting the
+              same exams.
+            </p>
+          </div>
         </div>
       </section>
 
       {/* How it works */}
-      <section className="border-t border-black/10 dark:border-white/10 bg-black/[0.015] dark:bg-white/[0.02]">
-        <div className="max-w-4xl mx-auto w-full px-8 py-16 flex flex-col gap-8">
-          <SectionHeading icon={<LightbulbIcon className="w-5 h-5" />}>How it works</SectionHeading>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <section className="bg-brand text-white">
+        <div className="max-w-4xl mx-auto w-full px-8 py-20 flex flex-col gap-10">
+          <SectionHeading icon={<HelpCircleIcon className="w-5 h-5" />} invert>
+            How it works
+          </SectionHeading>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] p-6 flex flex-col gap-3"
+                className="rounded-xl border border-white/15 bg-white/10 p-6 flex flex-col gap-3"
               >
-                <span className={`w-10 h-10 rounded-lg flex items-center justify-center ${f.wrap} ${f.ic}`}>
+                <span className="w-10 h-10 rounded-lg flex items-center justify-center bg-white/15 text-white">
                   {f.icon}
                 </span>
                 <div className="text-lg font-medium">{f.title}</div>
-                <p className="text-sm text-black/60 dark:text-white/60">{f.text}</p>
+                <p className="text-sm text-white/70">{f.text}</p>
               </div>
             ))}
           </div>
@@ -186,31 +237,42 @@ export default function AboutPage() {
       </section>
 
       {/* Contact AKUEB Prep */}
-      <section className="max-w-4xl mx-auto w-full px-8 py-16 flex flex-col gap-5">
-        <SectionHeading icon={<MailIcon className="w-5 h-5" />}>Contact AKUEB Prep</SectionHeading>
+      <section className="max-w-4xl mx-auto w-full px-8 py-20 flex flex-col gap-6">
+        <SectionHeading icon={<MessageCircleIcon className="w-5 h-5" />}>Contact AKUEB Prep</SectionHeading>
         <p className="text-base text-black/70 dark:text-white/70 max-w-prose">
           Questions, feedback, or found a mistake in a question? Get in touch.
         </p>
-        <a
-          href="mailto:akuebprep@gmail.com"
-          className="w-fit flex items-center gap-2.5 bg-brand text-white rounded-full pl-3 pr-5 py-2 text-base font-medium hover:bg-brand/90"
-        >
-          <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center">
-            <MailIcon className="w-4 h-4" />
-          </span>
-          akuebprep@gmail.com
-        </a>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="mailto:akuebprep@gmail.com"
+            className="w-fit flex items-center gap-2.5 bg-brand text-white rounded-full pl-3 pr-5 py-2 text-base font-medium hover:bg-brand/90"
+          >
+            <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center">
+              <MailIcon className="w-4 h-4" />
+            </span>
+            akuebprep@gmail.com
+          </a>
+          <a
+            href="https://www.instagram.com/akuebprep/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-fit flex items-center gap-2.5 bg-brand text-white rounded-full pl-3 pr-5 py-2 text-base font-medium hover:bg-brand/90"
+          >
+            <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center">
+              <InstagramIcon className="w-4 h-4" />
+            </span>
+            @akuebprep
+          </a>
+        </div>
       </section>
 
       {/* Developer */}
       <section className="border-t border-black/10 dark:border-white/10 bg-black/[0.015] dark:bg-white/[0.02]">
-        <div className="max-w-4xl mx-auto w-full px-8 py-16 flex flex-col gap-6">
+        <div className="max-w-4xl mx-auto w-full px-8 py-20 flex flex-col gap-7">
           <SectionHeading icon={<GraduationCapIcon className="w-5 h-5" />}>The developer</SectionHeading>
 
           <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] p-6 flex flex-col sm:flex-row gap-5">
-            <span className="shrink-0 w-16 h-16 rounded-full bg-gradient-to-br from-brand to-blue-500 text-white text-xl font-semibold flex items-center justify-center">
-              MA
-            </span>
+            
             <div className="flex flex-col gap-2">
               <div>
                 <div className="text-lg font-medium">Muawaz Ahmad</div>
@@ -243,6 +305,15 @@ export default function AboutPage() {
                   <LinkedInIcon className="w-4.5 h-4.5" />
                 </a>
                 <a
+                  href="https://www.instagram.com/muawaz_dev/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  className="w-9 h-9 rounded-full border border-black/10 dark:border-white/15 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 hover:text-brand dark:hover:text-blue-400"
+                >
+                  <InstagramIcon className="w-4.5 h-4.5" />
+                </a>
+                <a
                   href="mailto:muawaz8@gmail.com"
                   aria-label="Email"
                   className="w-9 h-9 rounded-full border border-black/10 dark:border-white/15 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 hover:text-brand dark:hover:text-blue-400"
@@ -257,7 +328,7 @@ export default function AboutPage() {
 
       {/* Closing CTA */}
       <section className="bg-brand text-white">
-        <div className="max-w-4xl mx-auto w-full px-8 py-14 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="max-w-4xl mx-auto w-full px-8 py-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold">Ready to practice?</h2>
             <p className="text-base text-white/70 mt-1">Jump into the question bank and pick up where you left off.</p>

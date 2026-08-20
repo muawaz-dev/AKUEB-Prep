@@ -17,11 +17,18 @@ math-field::part(menu-toggle) {
   --background: #ffffff;
   --foreground: #171717;
   --brand: #13265c;
+  /* Tells the browser which palette to use for UA-rendered chrome it
+     doesn't take CSS for - a <select>'s open dropdown list, scrollbars,
+     etc. Without this, that chrome defaults to the OS scheme regardless of
+     our .dark class, which can pair light-on-light or dark-on-dark text
+     with our own styling and make it unreadable. */
+  color-scheme: light;
 }
 
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  color-scheme: dark;
 }
 
 /* MathLive picks its selection/highlight colors partly from the OS-level

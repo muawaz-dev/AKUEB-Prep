@@ -37,11 +37,18 @@ export type Pending = {
 export type InitialFilters = Partial<Pick<Pending, "classId" | "subjectId" | "chapterId" | "pastPaper">>;
 
 const selectClass =
-  "peer w-full appearance-none rounded-lg border border-black/15 dark:border-white/15 bg-white dark:bg-white/[0.04] " +
+  // The open dropdown list is native UA chrome our CSS can't reach; only
+  // color-scheme tells the browser which built-in popup palette (dark bg +
+  // light text, vs. the default light one) to draw it with. Setting it
+  // directly on the <select> rather than relying on inheritance from
+  // <html class="dark"> avoids a Chrome quirk where the popup still picks
+  // the light default despite an inherited dark color-scheme.
+  "[color-scheme:light] dark:[color-scheme:dark] " +
+  "peer w-full appearance-none rounded-lg border border-black/15 dark:border-white/20 bg-white dark:bg-white/10 " +
   "pl-3 pr-9 py-2.5 text-sm font-medium text-foreground shadow-sm outline-none transition-colors " +
-  "hover:border-black/30 dark:hover:border-white/30 " +
+  "hover:border-black/30 dark:hover:border-white/40 " +
   "focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 dark:focus-visible:border-blue-400 dark:focus-visible:ring-blue-400/30 " +
-  "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-black/15 dark:disabled:hover:border-white/15";
+  "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-black/15 dark:disabled:hover:border-white/20";
 
 // Native <select> arrows can't be restyled directly (appearance-none strips
 // the OS one entirely), so this SVG chevron sits on top instead - rotated

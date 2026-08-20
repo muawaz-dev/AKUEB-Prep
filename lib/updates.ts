@@ -3,8 +3,8 @@
 export const UPDATES: { date: string; title: string; text: string }[] = [
   {
     date: "Aug 2026",
-    title: "Fill-in-the-blank questions",
-    text: "Added a new question type with typed or multiple-choice blanks, plus a math keyboard for typed answers.",
+    title: "Math and Physics Questions",
+    text: "Math and Physics Questions are being added HSCC-1.",
   },
   {
     date: "Aug 2026",

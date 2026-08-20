@@ -43,6 +43,16 @@ export async function Footer() {
           </Link>
         </div>
 
+        <div className="flex flex-col gap-1.5">
+          <span className="font-medium text-white/50 uppercase tracking-wide text-xs">Legal</span>
+          <Link href="/privacy-policy" className="hover:underline hover:text-white w-fit">
+            Privacy Policy
+          </Link>
+          <Link href="/terms-of-service" className="hover:underline hover:text-white w-fit">
+            Terms of Service
+          </Link>
+        </div>
+
         {combos.length > 0 && (
           <div className="flex flex-col gap-1.5">
             <span className="font-medium text-white/50 uppercase tracking-wide text-xs">Browse by subject</span>

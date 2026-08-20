@@ -78,20 +78,6 @@ export async function signInWithGoogleAction() {
   redirect(data.url);
 }
 
-export async function signInWithFacebookAction() {
-  const supabase = await createClient();
-  const origin = await getOrigin();
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "facebook",
-    options: { redirectTo: `${origin}/auth/callback` },
-  });
-
-  if (error || !data.url) {
-    redirect("/login?error=1");
-  }
-  redirect(data.url);
-}
-
 export async function forgotPasswordAction(formData: FormData) {
   const email = String(formData.get("email") ?? "")
     .trim()

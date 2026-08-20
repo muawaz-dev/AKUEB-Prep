@@ -5,9 +5,9 @@ import { WHATS_NEXT } from "@/lib/whatsNext";
 import { Footer } from "@/components/Footer";
 function FeatureCard({ title, text }: { title: string; text: string }) {
   return (
-    <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] p-6">
+    <div className="rounded-xl border border-white/15 bg-white/10 p-6">
       <div className="text-lg font-medium mb-1.5">{title}</div>
-      <p className="text-base text-black/60 dark:text-white/60">{text}</p>
+      <p className="text-base text-white/70">{text}</p>
     </div>
   );
 }
@@ -20,7 +20,7 @@ export default async function HomePage() {
 
     <div className="flex flex-col">
       {/* Hero */}
-      <section className="max-w-6xl mx-auto w-full px-8 pt-20 pb-16 flex flex-col gap-4">
+      <section className="max-w-6xl mx-auto w-full px-8 pt-24 pb-20 flex flex-col gap-5">
         <p className="text-sm font-medium text-brand dark:text-blue-400">
           {user ? `Welcome back${user.name ? `, ${user.name}` : ""}` : "AKUEB Prep"}
         </p>
@@ -28,6 +28,9 @@ export default async function HomePage() {
         <p className="text-lg text-black/60 dark:text-white/60 max-w-prose">
           AKUEB Prep is a free question bank built for AKU-EB students - chapter-wise MCQs and
           past papers you can practice online, graded instantly, with progress tracking built in.
+        </p>
+        <p className="text-sm text-black/40 dark:text-white/40 max-w-prose">
+          AKUEB Prep is an independent, student-built site and is not an official AKU-EB service.
         </p>
         <Link
           href="/question-bank"
@@ -38,10 +41,10 @@ export default async function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="border-t border-black/10 dark:border-white/10 bg-black/[0.015] dark:bg-white/[0.02]">
-        <div className="max-w-6xl mx-auto w-full px-8 py-16">
-          <h2 className="text-2xl font-semibold mb-8">What you&apos;ll find here</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <section className="bg-brand text-white">
+        <div className="max-w-6xl mx-auto w-full px-8 py-20">
+          <h2 className="text-2xl font-semibold mb-10">What you&apos;ll find here</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             <FeatureCard
               title="Chapter-wise practice"
               text="MCQs and other question types for every chapter, filterable by topic and difficulty."
@@ -59,9 +62,9 @@ export default async function HomePage() {
       </section>
 
       {/* Updates */}
-      <section className="max-w-6xl mx-auto w-full px-8 py-16 flex flex-col gap-8">
+      <section className="max-w-6xl mx-auto w-full px-8 py-20 flex flex-col gap-10">
         <h2 className="text-2xl font-semibold">Updates</h2>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-7">
           {UPDATES.map((update) => (
             <div key={update.title} className="flex gap-4">
               <span className="shrink-0 w-24 pt-0.5 text-xs font-medium text-black/40 dark:text-white/40">
@@ -78,12 +81,12 @@ export default async function HomePage() {
 
       {/* What's Next */}
       <section className="border-t border-black/10 dark:border-white/10 bg-black/[0.015] dark:bg-white/[0.02]">
-        <div className="max-w-6xl mx-auto w-full px-8 py-16">
+        <div className="max-w-6xl mx-auto w-full px-8 py-20">
           <h2 className="text-2xl font-semibold mb-2">What&apos;s Next?</h2>
-          <p className="text-base text-black/60 dark:text-white/60 mb-8 max-w-prose">
+          <p className="text-base text-black/60 dark:text-white/60 mb-10 max-w-prose">
             Here&apos;s what&apos;s coming to AKU-EB Maths.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             {WHATS_NEXT.map((item) => (
               <div
                 key={item.title}
@@ -99,7 +102,7 @@ export default async function HomePage() {
 
       {/* Closing CTA */}
       <section className="border-t border-black/10 dark:border-white/10 bg-brand text-white">
-        <div className="max-w-6xl mx-auto w-full px-8 py-14 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="max-w-6xl mx-auto w-full px-8 py-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold">Ready to practice?</h2>
             <p className="text-base text-white/70 mt-1">Jump into the question bank and pick up where you left off.</p>
