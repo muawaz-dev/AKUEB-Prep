@@ -389,8 +389,11 @@ export function QuestionWidget({
                   />
                 )}
                 {revealAnswers && gotWrong && answer !== undefined && (
-                  <span className="text-base text-green-700 dark:text-green-500 ml-1 align-middle">
-                    (<MarkdownContent text={`$${answer}$`} inline />)
+                  <span className="text-base text-green-700 dark:text-green-500 ml-1 align-middle whitespace-nowrap">
+                    {/* Options-based blanks store fully-delimited Markdown (like MCQ
+                        choices do) - only the free-text/MathKeyboardInput path stores
+                        raw LaTeX that still needs its own $ wrapper. */}
+                    (<MarkdownContent text={blank.options?.length ? answer : `$${answer}$`} inline />)
                   </span>
                 )}
               </span>
