@@ -30,8 +30,12 @@ export async function checkQuestionAnswer(
 
   const result = checkAnswer(type, question.data as Record<string, unknown>, submission);
 
+  // Explanation is withheld only until a real attempt has been made - not
+  // withheld forever on a wrong one. "Show explanation" (see QuestionWidget)
+  // exists specifically for wrong answers, so it needs this regardless of
+  // whether the check came back correct.
   if (!result.correct) {
-    return { result, explanation: null, solved: null };
+    return { result, explanation: question.explanation, solved: null };
   }
 
   const user = await getCurrentUser();

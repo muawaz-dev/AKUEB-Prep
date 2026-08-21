@@ -56,9 +56,10 @@ export function QuestionWidget({
   );
   const [blankInputs, setBlankInputs] = useState<string[]>(() => (data.blanks ?? []).map(() => ""));
   const [checked, setChecked] = useState(false);
-  // Gates the correct-answer reveal and explanation behind a manual click when
-  // the attempt was wrong, so retrying doesn't just mean "look at the answer
-  // that was already given away" - resets on every new attempt (see resetAttempt).
+  // Gates the correct-answer reveal and explanation behind a manual click
+  // regardless of whether the attempt was right or wrong, so retrying after
+  // an edit doesn't just mean "look at the answer that was already given
+  // away" - resets on every new attempt (see resetAttempt).
   const [explanationRevealed, setExplanationRevealed] = useState(false);
   const [openBlank, setOpenBlank] = useState<number | null>(null);
   const blankMenuRefs = useRef<(HTMLSpanElement | null)[]>([]);
@@ -166,9 +167,10 @@ export function QuestionWidget({
   // server-side, same reasoning as the answer key); the real text only
   // arrives via checkQuestionAnswer once a check comes back.
   const effectiveExplanation = questionId ? serverExplanation : explanation;
-  // Nothing to hide once the attempt is fully correct; when it's wrong, the
-  // correct-answer highlighting and explanations wait for the reveal button.
-  const revealAnswers = checked && (correct || explanationRevealed);
+  // Explanation always waits for the reveal button, whether the attempt was
+  // right or wrong - "Correct!"/"Not quite." already communicates the
+  // outcome on its own.
+  const revealAnswers = checked && explanationRevealed;
   const mcqCorrectCount = mcqQuestions.filter((_, i) => mcqSelections[i] === mcqCorrectIndex(i)).length;
   const tfCorrectCount = statements.filter((_, i) => tfSelections[i] === statementIsTrue(i)).length;
   const blankCorrectCount = blanks.filter((_, i) => {
@@ -448,7 +450,7 @@ export function QuestionWidget({
           {correct && pointsAwarded !== null && (
             <span className="ml-2 text-sm font-medium text-black/60 dark:text-white/60">+{pointsAwarded} points</span>
           )}
-          {!correct && !explanationRevealed && (
+          {!explanationRevealed && (
             <button
               type="button"
               onClick={() => setExplanationRevealed(true)}
