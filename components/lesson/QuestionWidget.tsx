@@ -4,11 +4,16 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type { QuestionType } from "@/app/generated/prisma/enums";
 import { MarkdownContent } from "./MarkdownContent";
 import { MathKeyboardInput } from "../MathKeyboardInput";
-import { recordSolvedQuestion } from "@/app/question-bank/actions";
+import { checkQuestionAnswer } from "@/app/question-bank/actions";
+import { matches, type Submission, type CheckResult } from "@/lib/answerChecking";
 
-type McqQuestion = { text: string; choices: string[]; correctIndex: number; explanation?: string };
-type TrueFalseStatement = { text: string; isTrue: boolean; explanation?: string };
-type BlankConfig = { options?: string[]; answer: string };
+// correctIndex/isTrue/answer are absent for tracked questions (questionId
+// set) - the server strips them before this data ever reaches the browser
+// (see lib/questionWidgetData.ts) and reveals them via checkQuestionAnswer
+// instead. Untracked (ContentBlock) questions always carry them for real.
+type McqQuestion = { text: string; choices: string[]; correctIndex?: number; explanation?: string };
+type TrueFalseStatement = { text: string; isTrue?: boolean; explanation?: string };
+type BlankConfig = { options?: string[]; answer?: string };
 
 type QuestionData = {
   mcqQuestions?: McqQuestion[];
@@ -19,186 +24,6 @@ type QuestionData = {
   segments?: string[];
   blanks?: BlankConfig[];
 };
-
-// Pulls the {num} and {den} out of a \frac at `openIdx` (which must point at
-// the "{" opening the first group), respecting nested braces so something
-// like \frac{-\frac{1}{2}}{3} extracts correctly. Returns null on unbalanced
-// braces.
-function extractBraced(s: string, openIdx: number): [string | null, number] {
-  if (s[openIdx] !== "{") return [null, openIdx];
-  let depth = 0;
-  for (let i = openIdx; i < s.length; i++) {
-    if (s[i] === "{") depth++;
-    else if (s[i] === "}") {
-      depth--;
-      if (depth === 0) return [s.slice(openIdx + 1, i), i + 1];
-    }
-  }
-  return [null, openIdx];
-}
-
-// TeX only requires braces around a \frac argument when it's more than one
-// token - MathLive relies on this and serializes a single-digit fraction as
-// e.g. "\frac72" (meaning \frac{7}{2}) rather than "\frac{7}{2}", so a brace
-// group is just one *kind* of argument, not the only one.
-function extractArg(s: string, i: number): [string | null, number] {
-  if (i >= s.length) return [null, i];
-  if (s[i] === "{") return extractBraced(s, i);
-  return [s[i], i + 1];
-}
-
-// Rewrites every \frac<a><b> (recursively, so nested fractions work) into
-// (a)/(b) so the result can be evaluated as plain arithmetic - each of <a>/<b>
-// is either a {braced group} or a single character, per TeX's argument rules
-// (see extractArg). Returns null if a \frac isn't followed by two arguments.
-function convertFracToDivision(s: string): string | null {
-  const FRAC = "\\frac";
-  while (s.includes(FRAC)) {
-    const idx = s.indexOf(FRAC);
-    const [num, afterNum] = extractArg(s, idx + FRAC.length);
-    if (num === null) return null;
-    const [den, afterDen] = extractArg(s, afterNum);
-    if (den === null) return null;
-    const numConverted = convertFracToDivision(num);
-    const denConverted = convertFracToDivision(den);
-    if (numConverted === null || denConverted === null) return null;
-    s = `${s.slice(0, idx)}(${numConverted})/(${denConverted})${s.slice(afterDen)}`;
-  }
-  return s;
-}
-
-// Strips the LaTeX wrapping (\left/\right, $ delimiters, a typographic minus)
-// and rewrites \frac/\cdot/\times/\div into JS-arithmetic spelling. Shared by
-// the pure-arithmetic and algebraic evaluators below. Returns null if a
-// \frac isn't well-formed (see convertFracToDivision).
-function cleanLatexForEval(latex: string): string | null {
-  const s = latex
-    .trim()
-    .replace(/^\$+|\$+$/g, "")
-    .replace(/\\left|\\right/g, "")
-    .replace(/\\dfrac|\\tfrac/g, "\\frac")
-    .replace(/\\cdot|\\times/g, "*")
-    .replace(/\\div/g, "/")
-    // MathLive can render/serialize a typographic minus (U+2212) instead of
-    // an ASCII hyphen depending on how it was typed - visually identical,
-    // but a different character, so normalize before evaluating.
-    .replace(/−/g, "-");
-  const converted = convertFracToDivision(s);
-  if (converted === null) return null;
-  return converted.replace(/\s+/g, "");
-}
-
-function safeEvalArithmetic(cleaned: string): number | null {
-  if (!cleaned || !/^[\d+\-*/().]+$/.test(cleaned)) return null;
-  try {
-    // Safe despite the dynamic construction: `cleaned` is whitelisted above
-    // to digits/+-*/()., so no identifiers or statement separators can
-    // reach the Function body.
-    const val = Function(`"use strict";return (${cleaned});`)() as unknown;
-    return typeof val === "number" && Number.isFinite(val) ? val : null;
-  } catch {
-    return null;
-  }
-}
-
-// A math-keyboard answer like "-7/2" has more than one valid LaTeX spelling
-// (e.g. "-\frac{7}{2}" vs "\frac{-7}{2}") depending on exactly how the minus
-// sign was typed relative to the fraction button - both render identically
-// but aren't the same string. Evaluating both sides as arithmetic lets
-// numerically-equal answers match regardless of which spelling was used.
-// Returns null for anything that isn't pure arithmetic (variables, other
-// LaTeX commands), so non-numeric answers fall through to the algebraic or
-// exact-string checks.
-function evalLatexArithmetic(latex: string): number | null {
-  const cleaned = cleanLatexForEval(latex);
-  return cleaned === null ? null : safeEvalArithmetic(cleaned);
-}
-
-// Same letter-adjacency rules as standard math notation: a digit/letter/")"
-// immediately followed by a letter/"(" implies multiplication (e.g. "5n",
-// "n(5n+9)", ")(" ), except between two digits where it's just one number
-// (e.g. "59"). Lets algebraic LaTeX be evaluated as JS once variables are
-// substituted with numbers.
-function insertImplicitMultiplication(s: string): string {
-  let out = "";
-  for (let i = 0; i < s.length; i++) {
-    out += s[i];
-    if (i + 1 >= s.length) continue;
-    const a = s[i];
-    const b = s[i + 1];
-    const aEndsFactor = /[a-zA-Z0-9)]/.test(a);
-    const bStartsFactor = /[a-zA-Z(]/.test(b) || /[0-9]/.test(b);
-    const bothDigits = /[0-9]/.test(a) && /[0-9]/.test(b);
-    if (aEndsFactor && bStartsFactor && !bothDigits) out += "*";
-  }
-  return out;
-}
-
-// Distinct single letters appearing in the normalized (LaTeX-command-free)
-// expression, e.g. "n(5n+9)/2" -> ["n"]. Returns null if the expression
-// couldn't be normalized (unbalanced \frac).
-function extractVariables(latex: string): string[] | null {
-  const cleaned = cleanLatexForEval(latex);
-  if (cleaned === null) return null;
-  return Array.from(new Set(cleaned.match(/[a-zA-Z]/g) ?? []));
-}
-
-function evalLatexAlgebraic(latex: string, substitutions: Record<string, number>): number | null {
-  const cleaned = cleanLatexForEval(latex);
-  if (cleaned === null) return null;
-  let substituted = insertImplicitMultiplication(cleaned);
-  for (const [name, val] of Object.entries(substitutions)) {
-    substituted = substituted.split(name).join(`(${val})`);
-  }
-  return safeEvalArithmetic(substituted);
-}
-
-// A math-keyboard answer containing a variable (e.g. "n(5n+9)/2") also has
-// more than one valid LaTeX spelling (\frac{n(5n+9)}{2}, extra \left(\right)
-// grouping, etc.) that the exact-string check would reject. Since there's no
-// CAS available, equivalence is approximated by substituting several random
-// numeric values for each variable and checking the two sides agree at all
-// of them - a coincidental match across multiple random points is
-// vanishingly unlikely unless the expressions really are equivalent.
-// Returns null (defer to the caller's other checks) when neither side has a
-// variable, when the variable sets differ, or when either side can't be
-// evaluated as algebra.
-function algebraicMatch(value: string, answer: string): boolean | null {
-  const varsValue = extractVariables(value);
-  const varsAnswer = extractVariables(answer);
-  if (varsValue === null || varsAnswer === null) return null;
-  if (varsValue.length === 0 && varsAnswer.length === 0) return null;
-  const sortedValue = [...varsValue].sort().join(",");
-  const sortedAnswer = [...varsAnswer].sort().join(",");
-  if (sortedValue !== sortedAnswer) return false;
-
-  const TRIALS = 5;
-  for (let t = 0; t < TRIALS; t++) {
-    const substitutions: Record<string, number> = {};
-    for (const v of varsAnswer) {
-      substitutions[v] = Math.random() * 8 + 1.31 + t * 0.73;
-    }
-    const numValue = evalLatexAlgebraic(value, substitutions);
-    const numAnswer = evalLatexAlgebraic(answer, substitutions);
-    if (numValue === null || numAnswer === null) return null;
-    if (Math.abs(numValue - numAnswer) > 1e-6) return false;
-  }
-  return true;
-}
-
-function matches(value: string, answer: string): boolean {
-  const trimmedValue = value.trim().toLowerCase();
-  const trimmedAnswer = answer.trim().toLowerCase();
-  if (trimmedValue === trimmedAnswer) return true;
-
-  const algebraic = algebraicMatch(value, answer);
-  if (algebraic !== null) return algebraic;
-
-  const numValue = evalLatexArithmetic(value);
-  const numAnswer = evalLatexArithmetic(answer);
-  if (numValue === null || numAnswer === null) return false;
-  return Math.abs(numValue - numAnswer) < 1e-9;
-}
 
 export function QuestionWidget({
   type,
@@ -243,12 +68,20 @@ export function QuestionWidget({
   // resetAttempt(): it must survive across edits/retries within the session.
   const [hadWrongAttempt, setHadWrongAttempt] = useState(false);
   const [pointsAwarded, setPointsAwarded] = useState<number | null>(null);
-  const [, startSolvedTransition] = useTransition();
+  // For tracked questions (questionId set), `data` has the answer key
+  // stripped server-side (see lib/questionWidgetData.ts) - these hold what
+  // checkQuestionAnswer reveals once a real check comes back, standing in
+  // for the answer-key fields untracked questions already carry in `data`.
+  const [serverResult, setServerResult] = useState<CheckResult | null>(null);
+  const [serverExplanation, setServerExplanation] = useState<string | null>(null);
+  const [checkPending, startCheckTransition] = useTransition();
 
   function resetAttempt() {
     setChecked(false);
     setExplanationRevealed(false);
     setPointsAwarded(null);
+    setServerResult(null);
+    setServerExplanation(null);
   }
 
   useEffect(() => {
@@ -267,6 +100,28 @@ export function QuestionWidget({
   const segments = data.segments ?? [];
   const blanks = data.blanks ?? [];
 
+  // Tracked questions (questionId set) never carry the answer key in `data`
+  // (it's stripped server-side, see lib/questionWidgetData.ts) - these read
+  // it from what checkQuestionAnswer revealed instead, once a real check has
+  // come back. Untracked questions already have the full answer key in
+  // `data`, so they're used as-is. Either way, undefined means "not known
+  // yet" (tracked + not checked).
+  const mcqCorrectIndex = (qi: number): number | undefined =>
+    questionId ? (serverResult?.type === "MCQ" ? serverResult.correctIndex : undefined) : mcqQuestions[qi]?.correctIndex;
+  const statementIsTrue = (i: number): boolean | undefined =>
+    questionId ? (serverResult?.type === "TRUE_FALSE" ? serverResult.statements[i]?.isTrue : undefined) : statements[i]?.isTrue;
+  const statementExplanation = (i: number): string | undefined =>
+    questionId
+      ? serverResult?.type === "TRUE_FALSE"
+        ? serverResult.statements[i]?.explanation
+        : undefined
+      : statements[i]?.explanation;
+  const blankAnswer = (i: number): string | undefined =>
+    questionId ? (serverResult?.type === "FILL_IN_BLANK" ? serverResult.blanks[i]?.answer : undefined) : blanks[i]?.answer;
+
+  // Only ever called for untracked (ContentBlock) questions, where `data`
+  // genuinely carries the full answer key - hence the assertion below.
+  // Tracked questions compute `correct` from serverResult instead (see below).
   const isCorrect = (): boolean => {
     if (type === "MCQ") return mcqQuestions.every((q, i) => mcqSelections[i] === q.correctIndex);
     if (type === "NUMERIC") {
@@ -283,10 +138,18 @@ export function QuestionWidget({
       return statements.every((s, i) => tfSelections[i] === s.isTrue);
     }
     if (type === "FILL_IN_BLANK") {
-      return blanks.every((b, i) => matches(blankInputs[i] ?? "", b.answer));
+      return blanks.every((b, i) => matches(blankInputs[i] ?? "", b.answer!));
     }
     return false;
   };
+
+  function buildSubmission(): Submission {
+    if (type === "MCQ") return { type: "MCQ", selectedIndex: mcqSelections[0] ?? null };
+    if (type === "NUMERIC") return { type: "NUMERIC", value: numericInput };
+    if (type === "SHORT_TEXT") return { type: "SHORT_TEXT", value: textInput };
+    if (type === "TRUE_FALSE") return { type: "TRUE_FALSE", selections: tfSelections };
+    return { type: "FILL_IN_BLANK", values: blankInputs };
+  }
 
   const canCheck =
     (type === "MCQ" && mcqQuestions.length > 0 && mcqSelections.every((s) => s !== null)) ||
@@ -295,13 +158,23 @@ export function QuestionWidget({
     (type === "TRUE_FALSE" && statements.length > 0 && tfSelections.every((s) => s !== null)) ||
     (type === "FILL_IN_BLANK" && blanks.length > 0 && blankInputs.every((v) => v.trim() !== ""));
 
-  const correct = checked && isCorrect();
+  // Tracked questions only know correctness once the server's graded the
+  // submission (see handleCheck); untracked ones can grade instantly from
+  // the answer key already present in `data`.
+  const correct = checked && (questionId ? (serverResult?.correct ?? false) : isCorrect());
+  // Tracked questions' `explanation` prop is always null (stripped
+  // server-side, same reasoning as the answer key); the real text only
+  // arrives via checkQuestionAnswer once a check comes back.
+  const effectiveExplanation = questionId ? serverExplanation : explanation;
   // Nothing to hide once the attempt is fully correct; when it's wrong, the
   // correct-answer highlighting and explanations wait for the reveal button.
   const revealAnswers = checked && (correct || explanationRevealed);
-  const mcqCorrectCount = mcqQuestions.filter((q, i) => mcqSelections[i] === q.correctIndex).length;
-  const tfCorrectCount = statements.filter((s, i) => tfSelections[i] === s.isTrue).length;
-  const blankCorrectCount = blanks.filter((b, i) => matches(blankInputs[i] ?? "", b.answer)).length;
+  const mcqCorrectCount = mcqQuestions.filter((_, i) => mcqSelections[i] === mcqCorrectIndex(i)).length;
+  const tfCorrectCount = statements.filter((_, i) => tfSelections[i] === statementIsTrue(i)).length;
+  const blankCorrectCount = blanks.filter((_, i) => {
+    const answer = blankAnswer(i);
+    return answer !== undefined && matches(blankInputs[i] ?? "", answer);
+  }).length;
   const partsTotal =
     type === "MCQ" ? mcqQuestions.length : type === "TRUE_FALSE" ? statements.length : type === "FILL_IN_BLANK" ? blanks.length : 0;
   const partsCorrectCount =
@@ -326,7 +199,8 @@ export function QuestionWidget({
         <div className="flex flex-col gap-4">
           {mcqQuestions.map((q, qi) => {
             const selected = mcqSelections[qi];
-            const gotRight = checked && selected === q.correctIndex;
+            const correctIndex = mcqCorrectIndex(qi);
+            const gotRight = checked && selected === correctIndex;
             return (
               <div key={qi} className="flex flex-col gap-1.5">
                 {q.text && (
@@ -337,7 +211,7 @@ export function QuestionWidget({
                 <div className="flex flex-col gap-2">
                   {q.choices.map((choice, ci) => {
                     const isSelected = selected === ci;
-                    const showAsCorrectAnswer = revealAnswers && !gotRight && q.correctIndex === ci;
+                    const showAsCorrectAnswer = revealAnswers && !gotRight && correctIndex === ci;
                     return (
                       <label
                         key={ci}
@@ -403,8 +277,9 @@ export function QuestionWidget({
         <div className="flex flex-col gap-3">
           {statements.map((statement, i) => {
             const selection = tfSelections[i];
-            const gotRight = checked && selection === statement.isTrue;
-            const gotWrong = checked && selection !== null && selection !== statement.isTrue;
+            const isTrue = statementIsTrue(i);
+            const gotRight = checked && selection === isTrue;
+            const gotWrong = checked && selection !== null && selection !== isTrue;
             return (
               <div key={i} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-3">
@@ -414,7 +289,7 @@ export function QuestionWidget({
                   <div className="flex gap-1.5 shrink-0">
                     {([true, false] as const).map((option) => {
                       const isSelected = selection === option;
-                      const showAsCorrectAnswer = revealAnswers && gotWrong && statement.isTrue === option;
+                      const showAsCorrectAnswer = revealAnswers && gotWrong && isTrue === option;
                       return (
                         <button
                           key={String(option)}
@@ -441,9 +316,9 @@ export function QuestionWidget({
                     })}
                   </div>
                 </div>
-                {revealAnswers && statement.explanation && (
+                {revealAnswers && statementExplanation(i) && (
                   <p className={`text-xs ${gotRight ? "text-green-600" : "text-red-600"}`}>
-                    <MarkdownContent text={statement.explanation} inline />
+                    <MarkdownContent text={statementExplanation(i)!} inline />
                   </p>
                 )}
               </div>
@@ -456,8 +331,9 @@ export function QuestionWidget({
         <div className="text-base leading-8">
           {blanks.map((blank, i) => {
             const value = blankInputs[i] ?? "";
-            const gotRight = checked && matches(value, blank.answer);
-            const gotWrong = checked && value.trim() !== "" && !matches(value, blank.answer);
+            const answer = blankAnswer(i);
+            const gotRight = checked && answer !== undefined && matches(value, answer);
+            const gotWrong = checked && value.trim() !== "" && !(answer !== undefined && matches(value, answer));
             const stateClass = gotRight
               ? "border-green-600 bg-green-600/10 text-green-700 dark:text-green-500"
               : gotWrong
@@ -510,9 +386,9 @@ export function QuestionWidget({
                     inputBoxClassName={stateClass}
                   />
                 )}
-                {revealAnswers && gotWrong && (
+                {revealAnswers && gotWrong && answer !== undefined && (
                   <span className="text-base text-green-700 dark:text-green-500 ml-1 align-middle">
-                    (<MarkdownContent text={`$${blank.answer}$`} inline />)
+                    (<MarkdownContent text={`$${answer}$`} inline />)
                   </span>
                 )}
               </span>
@@ -524,24 +400,40 @@ export function QuestionWidget({
 
       <button
         type="button"
-        disabled={!canCheck}
+        disabled={!canCheck || checkPending}
         onClick={() => {
-          setChecked(true);
-          if (isCorrect()) {
-            if (questionId) {
-              const firstTryCorrect = !hadWrongAttempt;
-              startSolvedTransition(async () => {
-                const result = await recordSolvedQuestion(questionId, firstTryCorrect);
-                if (result.ok && !result.alreadySolved) setPointsAwarded(result.pointsAwarded);
-              });
-            }
-          } else {
-            setHadWrongAttempt(true);
+          if (questionId) {
+            const submission = buildSubmission();
+            startCheckTransition(async () => {
+              try {
+                const { result, explanation: revealed, solved } = await checkQuestionAnswer(
+                  questionId,
+                  type,
+                  submission,
+                  hadWrongAttempt
+                );
+                setServerResult(result);
+                setServerExplanation(revealed);
+                setChecked(true);
+                if (result.correct) {
+                  if (solved) setPointsAwarded(solved.pointsAwarded);
+                } else {
+                  setHadWrongAttempt(true);
+                }
+              } catch {
+                // Transient failure (network, etc.) - leave `checked` false
+                // so the button stays enabled and the student can retry.
+              }
+            });
+            return;
           }
+
+          setChecked(true);
+          if (!isCorrect()) setHadWrongAttempt(true);
         }}
         className="bg-black text-white dark:bg-white dark:text-black rounded px-3 py-2 text-base font-medium w-fit disabled:opacity-40"
       >
-        Check answer
+        {checkPending ? "Checking..." : "Check answer"}
       </button>
 
       {checked && partsTotal > 0 && (
@@ -565,9 +457,9 @@ export function QuestionWidget({
               Show explanation
             </button>
           )}
-          {explanation && revealAnswers && (
+          {effectiveExplanation && revealAnswers && (
             <div className="mt-1 text-black/70 dark:text-white/70">
-              <MarkdownContent text={explanation} />
+              <MarkdownContent text={effectiveExplanation} />
             </div>
           )}
         </div>
