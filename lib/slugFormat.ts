@@ -11,14 +11,24 @@
 export const MIN_QUESTIONS = 3;
 
 const CLASS_LEVEL_TO_SLUG: Record<number, string> = {
-  9: "ssc-i",
-  10: "ssc-ii",
-  11: "hssc-i",
-  12: "hssc-ii",
+  9: "class-9",
+  10: "class-10",
+  11: "class-11",
+  12: "class-12",
 };
 const SLUG_TO_CLASS_LEVEL: Record<string, number> = Object.fromEntries(
   Object.entries(CLASS_LEVEL_TO_SLUG).map(([level, slug]) => [slug, Number(level)])
 );
+
+// AKU-EB's own grade names - shown alongside "Class N" (the term people
+// actually search for) rather than as the primary label. See
+// classLevelToLabel/classLevelToShortLabel below.
+const CLASS_LEVEL_TO_LEGACY_CODE: Record<number, string> = {
+  9: "SSC-I",
+  10: "SSC-II",
+  11: "HSSC-I",
+  12: "HSSC-II",
+};
 
 export function classLevelToSlug(level: number): string {
   return CLASS_LEVEL_TO_SLUG[level] ?? `class-${level}`;
@@ -26,6 +36,27 @@ export function classLevelToSlug(level: number): string {
 
 export function slugToClassLevel(slug: string): number | null {
   return SLUG_TO_CLASS_LEVEL[slug] ?? null;
+}
+
+// "Class 11" - used wherever the AKU-EB legacy code would be redundant or
+// clash with a shorter title (e.g. past-paper pages/titles).
+export function classLevelToShortLabel(level: number): string {
+  return `Class ${level}`;
+}
+
+// "Class 11 (HSSC-I)" - the general-purpose display label for class hub,
+// subject, and chapter pages (H1s, <title>s, breadcrumbs).
+export function classLevelToLabel(level: number): string {
+  const legacyCode = CLASS_LEVEL_TO_LEGACY_CODE[level];
+  const shortLabel = classLevelToShortLabel(level);
+  return legacyCode ? `${shortLabel} (${legacyCode})` : shortLabel;
+}
+
+// Past-paper text is free-form (e.g. "AKU-EB Model Paper 2025", "Model Paper
+// 2025") - strips a leading board prefix so it can be recombined as
+// "Class 11 Physics Model Paper 2025" without repeating "AKU-EB".
+export function stripBoardPrefix(pastPaper: string): string {
+  return pastPaper.replace(/^aku-?eb\s*/i, "").trim();
 }
 
 export function slugify(text: string): string {

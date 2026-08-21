@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { resolveClassSubject, findBySlug } from "@/lib/slugs";
+import { resolveClassSubject, findBySlug, classLevelToLabel } from "@/lib/slugs";
 import { QuestionBankPageBody } from "@/components/question-bank/QuestionBankPageBody";
 import { MarkdownContent } from "@/components/lesson/MarkdownContent";
 import { toQuestionDto } from "@/lib/questionDto";
@@ -41,7 +41,7 @@ export async function generateMetadata({
   const { classLevel, subject, chapterSlug } = await params;
   const resolved = await resolveChapter(classLevel, subject, chapterSlug);
   if (!resolved) return {};
-  const classLabel = classLevel.toUpperCase();
+  const classLabel = classLevelToLabel(resolved.cls.level);
   return {
     title: `AKUEB ${classLabel} ${resolved.subject.name} ${resolved.chapter.title} MCQs & Practice Questions`,
     description: `Practice AKUEB ${classLabel} ${resolved.subject.name} - ${resolved.chapter.title} questions online with instant grading and explanations.`,
@@ -68,7 +68,7 @@ export default async function ChapterQuestionBankPage({
   // could be clickable in the sidebar and still 404 when you got there.
   const totalCount = await prisma.question.count({ where: { chapterId: chapter.id, status: "PUBLISHED" } });
 
-  const classLabel = classLevel.toUpperCase();
+  const classLabel = classLevelToLabel(cls.level);
   const fixed = { classId: cls.id, subjectId: subject.id, chapterId: chapter.id };
   const where = buildWhere({ ...fixed, ...extra });
   const orderBy = buildOrderBy(extra.sort);

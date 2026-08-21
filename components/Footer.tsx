@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { classLevelToSlug, slugify } from "@/lib/slugs";
+import { classLevelToSlug, classLevelToShortLabel, slugify } from "@/lib/slugs";
 import Image from "next/image";
 // Site-wide, so it's the one link Google can rely on finding from any page
 // to reach /question-bank/[classLevel]/[subject] - see the sibling
@@ -62,7 +62,7 @@ export async function Footer() {
                 href={`/question-bank/${classLevelToSlug(cls.level)}/${slugify(subject.name)}`}
                 className="hover:underline hover:text-white w-fit"
               >
-                {classLevelToSlug(cls.level).toUpperCase()} {subject.name}
+                {classLevelToShortLabel(cls.level)} {subject.name}
               </Link>
             ))}
           </div>

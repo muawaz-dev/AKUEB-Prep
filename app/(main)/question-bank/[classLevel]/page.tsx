@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { resolveClass } from "@/lib/slugs";
+import { resolveClass, classLevelToLabel } from "@/lib/slugs";
 import { QuestionBankPageBody } from "@/components/question-bank/QuestionBankPageBody";
 import { toQuestionDto } from "@/lib/questionDto";
 import { buildFilterTree } from "@/lib/questionBankFilterTree";
@@ -31,7 +31,7 @@ export async function generateMetadata({
   const { classLevel } = await params;
   const cls = await resolveClass(classLevel);
   if (!cls) return {};
-  const classLabel = classLevel.toUpperCase();
+  const classLabel = classLevelToLabel(cls.level);
   return {
     title: `AKUEB ${classLabel} Past Papers & Practice Questions`,
     description: `Practice AKUEB ${classLabel} chapter-wise MCQs and past papers online, across every subject, with instant grading.`,
@@ -49,7 +49,7 @@ export default async function ClassQuestionBankPage({
   const extra = await searchParams;
   const cls = await resolveClass(classLevel);
   if (!cls) notFound();
-  const classLabel = classLevel.toUpperCase();
+  const classLabel = classLevelToLabel(cls.level);
 
   const fixed = { classId: cls.id };
   const where = buildWhere({ ...fixed, ...extra });

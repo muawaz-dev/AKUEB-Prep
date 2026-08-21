@@ -33,6 +33,7 @@ export const metadata: Metadata = {
     "AKUEB past papers",
     "AKUEB question bank",
     "AKUEB MCQs",
+    "AKUEB Class 11 past papers",
     "HSSC 1 past papers",
     "FSc 1 past papers",
     "AKUEB Mathematics",

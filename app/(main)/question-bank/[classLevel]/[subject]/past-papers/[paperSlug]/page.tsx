@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { resolveClassSubject, slugify } from "@/lib/slugs";
+import { resolveClassSubject, slugify, classLevelToShortLabel, stripBoardPrefix } from "@/lib/slugs";
 import { QuestionBankPageBody } from "@/components/question-bank/QuestionBankPageBody";
 import { toQuestionDto } from "@/lib/questionDto";
 import { buildFilterTree } from "@/lib/questionBankFilterTree";
@@ -43,10 +43,11 @@ export async function generateMetadata({
   const { classLevel, subject, paperSlug } = await params;
   const resolved = await resolvePaper(classLevel, subject, paperSlug);
   if (!resolved) return {};
-  const classLabel = classLevel.toUpperCase();
+  const shortLabel = classLevelToShortLabel(resolved.cls.level);
+  const paperLabel = stripBoardPrefix(resolved.pastPaper);
   return {
-    title: `AKUEB ${classLabel} ${resolved.subject.name} ${resolved.pastPaper} - Practice Online`,
-    description: `Practice the AKUEB ${classLabel} ${resolved.subject.name} ${resolved.pastPaper} past paper online with instant grading and explanations.`,
+    title: `AKUEB ${shortLabel} ${resolved.subject.name} ${paperLabel} - Practice Online`,
+    description: `Practice the AKUEB ${shortLabel} ${resolved.subject.name} ${paperLabel} past paper online with instant grading and explanations.`,
   };
 }
 
@@ -63,7 +64,8 @@ export default async function PastPaperQuestionBankPage({
   if (!resolved) notFound();
   const { cls, subject, pastPaper, count } = resolved;
 
-  const classLabel = classLevel.toUpperCase();
+  const classLabel = classLevelToShortLabel(cls.level);
+  const paperLabel = stripBoardPrefix(pastPaper);
   const fixed = { classId: cls.id, subjectId: subject.id, pastPaper };
   const where = buildWhere({ ...fixed, ...extra });
   const orderBy = buildOrderBy(extra.sort);
@@ -105,7 +107,7 @@ export default async function PastPaperQuestionBankPage({
 
   return (
     <QuestionBankPageBody
-      title={pastPaper}
+      title={`${classLabel} ${subject.name} ${paperLabel}`}
       description={`${count} question${count === 1 ? "" : "s"} from this paper, gradeable instantly.`}
       backHref={`/question-bank/${classLevel}/${subjectSlug}`}
       backLabel={`${classLabel} ${subject.name}`}
@@ -119,7 +121,7 @@ export default async function PastPaperQuestionBankPage({
         {
           "@context": "https://schema.org",
           "@type": "Quiz",
-          name: `AKUEB ${classLabel} ${subject.name} ${pastPaper}`,
+          name: `AKUEB ${classLabel} ${subject.name} ${paperLabel}`,
           about: subject.name,
           educationalLevel: classLabel,
           numberOfQuestions: count,
@@ -128,7 +130,7 @@ export default async function PastPaperQuestionBankPage({
           { name: "Question Bank", url: "/question-bank" },
           { name: classLabel, url: `/question-bank/${classLevel}` },
           { name: subject.name, url: `/question-bank/${classLevel}/${subjectSlug}` },
-          { name: pastPaper, url: `/question-bank/${classLevel}/${subjectSlug}/past-papers/${paperSlug}` },
+          { name: paperLabel, url: `/question-bank/${classLevel}/${subjectSlug}/past-papers/${paperSlug}` },
         ]),
       ]}
     />
