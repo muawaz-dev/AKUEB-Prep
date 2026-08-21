@@ -26,6 +26,7 @@ export type Pending = {
   sloId: string;
   difficulty: string;
   pastPaper: string;
+  questionType: string;
   sort: string;
 };
 
@@ -91,6 +92,7 @@ function pendingFromParams(params: URLSearchParams): Pending {
     sloId: params.get("sloId") ?? "",
     difficulty: params.get("difficulty") ?? "",
     pastPaper: params.get("pastPaper") ?? "",
+    questionType: params.get("questionType") ?? "",
     sort: params.get("sort") ?? "",
   };
 }
@@ -313,6 +315,20 @@ export function QuestionBankFilters({
             <option value="EASY">Easy</option>
             <option value="MEDIUM">Medium</option>
             <option value="HARD">Hard</option>
+          </select>
+          <SelectChevron />
+        </FilterField>
+
+        <FilterField label="Type">
+          <select
+            aria-label="Type"
+            value={pending.questionType}
+            onChange={(e) => set({ questionType: e.target.value })}
+            className={selectClass}
+          >
+            <option value="">All types</option>
+            <option value="OBJECTIVE">Objective (MCQs)</option>
+            <option value="SUBJECTIVE">Subjective (non-MCQ)</option>
           </select>
           <SelectChevron />
         </FilterField>

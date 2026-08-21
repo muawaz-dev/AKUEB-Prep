@@ -9,6 +9,9 @@ export type QuestionBankParams = {
   sloId?: string | null;
   difficulty?: string | null;
   pastPaper?: string | null;
+  // "OBJECTIVE" = MCQ only, "SUBJECTIVE" = every other question type - matches
+  // how AKU-EB itself splits an exam paper, not a data model distinction.
+  questionType?: string | null;
   sort?: string | null;
 };
 
@@ -24,6 +27,8 @@ export function buildWhere(params: QuestionBankParams): Prisma.QuestionWhereInpu
   if (params.sloId) where.sloId = params.sloId;
   if (params.difficulty) where.difficulty = params.difficulty as Difficulty;
   if (params.pastPaper) where.pastPaper = params.pastPaper;
+  if (params.questionType === "OBJECTIVE") where.type = "MCQ";
+  else if (params.questionType === "SUBJECTIVE") where.type = { not: "MCQ" };
   return where;
 }
 
@@ -49,6 +54,7 @@ export function toQueryString(params: QuestionBankParams): string {
   if (params.sloId) qs.set("sloId", params.sloId);
   if (params.difficulty) qs.set("difficulty", params.difficulty);
   if (params.pastPaper) qs.set("pastPaper", params.pastPaper);
+  if (params.questionType) qs.set("questionType", params.questionType);
   if (params.sort) qs.set("sort", params.sort);
   return qs.toString();
 }

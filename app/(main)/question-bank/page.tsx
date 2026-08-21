@@ -17,6 +17,7 @@ export default async function QuestionBankPage({
     sloId?: string;
     difficulty?: string;
     pastPaper?: string;
+    questionType?: string;
     sort?: string;
   }>;
 }) {

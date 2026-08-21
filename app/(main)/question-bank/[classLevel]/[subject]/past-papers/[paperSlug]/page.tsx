@@ -17,6 +17,7 @@ type ExtraParams = {
   topicId?: string;
   sloId?: string;
   difficulty?: string;
+  questionType?: string;
   sort?: string;
 };
 

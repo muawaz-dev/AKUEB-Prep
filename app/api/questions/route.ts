@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     sloId: params.get("sloId"),
     difficulty: params.get("difficulty"),
     pastPaper: params.get("pastPaper"),
+    questionType: params.get("questionType"),
   });
   const orderBy = buildOrderBy(params.get("sort"));
 

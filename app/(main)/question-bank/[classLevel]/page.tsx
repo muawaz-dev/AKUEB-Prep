@@ -19,6 +19,7 @@ type ExtraParams = {
   sloId?: string;
   difficulty?: string;
   pastPaper?: string;
+  questionType?: string;
   sort?: string;
 };
 
