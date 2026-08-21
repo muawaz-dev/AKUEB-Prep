@@ -9,7 +9,10 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "tsx prisma/seed.ts",
   },
+  // The CLI (migrate/db push) needs session-level features - advisory
+  // locks, DDL - that the transaction-mode pooler in DATABASE_URL doesn't
+  // support, so it uses the direct/session connection instead.
   datasource: {
-    url: env("DATABASE_URL"),
+    url: env("DIRECT_URL"),
   },
 });

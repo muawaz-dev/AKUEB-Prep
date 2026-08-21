@@ -5,15 +5,15 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Each Next.js build worker (and, in production, each server instance) gets
-// its own pool via this module - the Supabase connection string in .env is
-// the direct/session-mode one (max 15 clients total, see .env's comment on
-// DATABASE_URL), not the transaction pooler. `next build` spreads work
-// across several workers (7 here) that all load this module concurrently,
-// so each one needs a small cap to stay under 15 combined - but the running
-// server is a single process, so it can afford much more headroom for
-// actual concurrent requests. NEXT_PHASE is set by Next.js only during the
-// build step, which is what tells the two apart.
+// DATABASE_URL is Supabase's transaction-mode pooler (see .env's comment),
+// which is designed for exactly this: many short-lived per-instance pools
+// rather than one long-lived one. That matters because on Vercel each
+// serverless invocation (and, during `next build`, each of its several
+// build workers) can end up with its own instance of this module and its
+// own pool - a single persistent server was never a safe assumption here.
+// Kept conservative anyway since there's no real need for a large pool per
+// instance. NEXT_PHASE is set by Next.js only during the build step, which
+// is what tells build-time apart from a running request.
 const isBuild = process.env.NEXT_PHASE === "phase-production-build";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, max: isBuild ? 2 : 10 });
 
