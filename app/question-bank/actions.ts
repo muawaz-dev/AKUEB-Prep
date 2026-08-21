@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { pointsForAttempt } from "@/lib/points";
 import { checkAnswer, type Submission, type CheckResult } from "@/lib/answerChecking";
 import type { QuestionType } from "@/app/generated/prisma/enums";
+import { Prisma } from "@/app/generated/prisma/client";
 
 // The single source of truth for "is this answer right", and the only path
 // that can ever mark a question solved. Grades server-side against the
@@ -36,11 +37,6 @@ export async function checkQuestionAnswer(
   const user = await getCurrentUser();
   if (!user) return { result, explanation: question.explanation, solved: null };
 
-  const existing = await prisma.solvedQuestion.findUnique({
-    where: { userId_questionId: { userId: user.id, questionId } },
-  });
-  if (existing) return { result, explanation: question.explanation, solved: null };
-
   // Re-derived from difficulty stored on the question rather than trusting a
   // client-supplied value, so points can't be inflated by claiming a harder
   // difficulty than the question was actually authored at. `hadWrongAttempt`
@@ -49,9 +45,22 @@ export async function checkQuestionAnswer(
   const firstTryCorrect = !hadWrongAttempt;
   const pointsAwarded = pointsForAttempt(question.difficulty, firstTryCorrect);
 
-  await prisma.solvedQuestion.create({
-    data: { userId: user.id, questionId, pointsAwarded, firstTryCorrect },
-  });
+  // create (not a find-then-create) so a duplicate/double-fired request for
+  // the same question can't race past an "already solved?" check that ran
+  // before either one had written anything - SolvedQuestion's only unique
+  // constraint is exactly (userId, questionId), so a genuine duplicate just
+  // fails with P2002 here instead of racing, and that's treated as "already
+  // solved, nothing new to award" rather than a real error.
+  try {
+    await prisma.solvedQuestion.create({
+      data: { userId: user.id, questionId, pointsAwarded, firstTryCorrect },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return { result, explanation: question.explanation, solved: null };
+    }
+    throw err;
+  }
 
   revalidatePath("/profile");
   revalidatePath("/question-bank");

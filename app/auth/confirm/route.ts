@@ -14,7 +14,14 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      // Password reset already lands on /reset-password's self-explanatory
+      // "choose a new password" form; signup confirmation has no equivalent
+      // next step, so it gets an explicit success screen instead of
+      // silently landing on the dashboard.
+      if (type === "recovery") {
+        return NextResponse.redirect(`${origin}${next}`);
+      }
+      return NextResponse.redirect(`${origin}/auth/confirmed?next=${encodeURIComponent(next)}`);
     }
   }
 
