@@ -10,7 +10,7 @@ export async function SiteHeader() {
   return (
     <header className="h-18 border-b border-white/10 sticky top-0 bg-brand text-white z-20">
       <div className="max-w-5xl mx-auto w-full h-full px-6 flex items-center justify-between">
-        <Link href="/courses" className="text-lg font-semibold">
+        <Link href="/" className="text-lg font-semibold">
           <Image
           src="/logo.png" 
           alt="Logo"

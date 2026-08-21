@@ -32,7 +32,7 @@ export async function signupAction(formData: FormData) {
     password,
     options: {
       data: { name: name || undefined },
-      emailRedirectTo: `${origin}/auth/confirm?next=/courses`,
+      emailRedirectTo: `${origin}/auth/confirm?next=/`,
     },
   });
 
@@ -55,13 +55,13 @@ export async function loginAction(formData: FormData) {
     redirect("/login?error=1");
   }
 
-  redirect("/courses");
+  redirect("/");
 }
 
 export async function logoutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/courses");
+  redirect("/");
 }
 
 export async function signInWithGoogleAction() {
@@ -106,8 +106,8 @@ export async function resetPasswordAction(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    redirect("/reset-password?error=1");
+    redirect(error.code === "same_password" ? "/reset-password?error=same" : "/reset-password?error=1");
   }
 
-  redirect("/courses");
+  redirect("/");
 }

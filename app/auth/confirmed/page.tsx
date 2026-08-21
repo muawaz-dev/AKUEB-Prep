@@ -24,7 +24,7 @@ export default async function EmailConfirmedPage({
             Your account is confirmed and you&apos;re signed in - you&apos;re all set.
           </p>
           <Link
-            href={next ?? "/courses"}
+            href={next ?? "/"}
             className="mt-1 bg-black text-white dark:bg-white dark:text-black rounded px-3 py-2 text-sm font-medium"
           >
             Continue

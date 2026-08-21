@@ -19,6 +19,8 @@ export default async function ResetPasswordPage({
           <h1 className="text-lg font-semibold">Choose a new password</h1>
           {error === "weak" ? (
             <p className="text-sm text-red-600">Password must be at least 8 characters.</p>
+          ) : error === "same" ? (
+            <p className="text-sm text-red-600">New password must be different from your current password.</p>
           ) : (
             error && <p className="text-sm text-red-600">That reset link isn&apos;t valid or has expired.</p>
           )}
