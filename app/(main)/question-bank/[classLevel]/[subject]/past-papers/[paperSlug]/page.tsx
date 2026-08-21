@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { resolveClassSubject, slugify, MIN_QUESTIONS } from "@/lib/slugs";
+import { resolveClassSubject, slugify } from "@/lib/slugs";
 import { QuestionBankPageBody } from "@/components/question-bank/QuestionBankPageBody";
 import { toQuestionDto } from "@/lib/questionDto";
 import { buildFilterTree } from "@/lib/questionBankFilterTree";
@@ -59,7 +59,7 @@ export default async function PastPaperQuestionBankPage({
   const { classLevel, subject: subjectSlug, paperSlug } = await params;
   const extra = await searchParams;
   const resolved = await resolvePaper(classLevel, subjectSlug, paperSlug);
-  if (!resolved || resolved.count < MIN_QUESTIONS) notFound();
+  if (!resolved) notFound();
   const { cls, subject, pastPaper, count } = resolved;
 
   const classLabel = classLevel.toUpperCase();

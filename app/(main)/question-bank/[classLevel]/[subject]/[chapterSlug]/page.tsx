@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { resolveClassSubject, findBySlug, MIN_QUESTIONS } from "@/lib/slugs";
+import { resolveClassSubject, findBySlug } from "@/lib/slugs";
 import { QuestionBankPageBody } from "@/components/question-bank/QuestionBankPageBody";
 import { MarkdownContent } from "@/components/lesson/MarkdownContent";
 import { toQuestionDto } from "@/lib/questionDto";
@@ -60,8 +60,12 @@ export default async function ChapterQuestionBankPage({
   if (!resolved) notFound();
   const { cls, subject, chapter } = resolved;
 
+  // Every published chapter shows its questions directly, same as any other
+  // chapter/subject/class page - no minimum count gate here. It's already
+  // linked from the subject page's filter tree regardless of how many
+  // questions it has, so gating this page specifically just meant a chapter
+  // could be clickable in the sidebar and still 404 when you got there.
   const totalCount = await prisma.question.count({ where: { chapterId: chapter.id, status: "PUBLISHED" } });
-  if (totalCount < MIN_QUESTIONS) notFound();
 
   const classLabel = classLevel.toUpperCase();
   const fixed = { classId: cls.id, subjectId: subject.id, chapterId: chapter.id };
