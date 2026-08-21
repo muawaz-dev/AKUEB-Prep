@@ -3,9 +3,13 @@ import { headers } from "next/headers";
 
 type Bucket = { count: number; resetAt: number };
 
-// In-memory only: resets on server restart and isn't shared across multiple
-// instances/processes. Fine for a single-instance deployment; swap for a
-// persistent store (e.g. Upstash Redis) before scaling horizontally.
+// In-memory only, and NOT actually shared across instances on this
+// deployment - this app runs as Vercel serverless functions, not a single
+// persistent process, so this limiter's real-world effectiveness is weaker
+// than its limit numbers suggest (a request landing on a different warm
+// instance gets a fresh bucket). Known, accepted limitation for now since
+// this only guards the admin login form; swap for a shared store (e.g. a
+// Postgres-backed counter, or Upstash Redis) if that stops being true.
 const buckets = new Map<string, Bucket>();
 
 export function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
