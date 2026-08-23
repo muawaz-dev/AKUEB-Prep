@@ -67,11 +67,6 @@ export function QuestionWidget({
   const [openBlank, setOpenBlank] = useState<number | null>(null);
   const blankMenuRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const openBlankMenuRef = useRef<HTMLDivElement | null>(null);
-  // Tells the server apart a first-try-correct solve (full points) from one
-  // after a wrong attempt (half points, see lib/points.ts). Everything locks
-  // after the first check now, so in practice this can only ever be false
-  // at call time - kept so the call matches checkQuestionAnswer's contract.
-  const [hadWrongAttempt, setHadWrongAttempt] = useState(false);
   const [pointsAwarded, setPointsAwarded] = useState<number | null>(null);
   // For tracked questions (questionId set), `data` has the answer key
   // stripped server-side (see lib/questionWidgetData.ts) - these hold what
@@ -88,10 +83,6 @@ export function QuestionWidget({
     setServerResult(null);
     setServerExplanation(null);
   }
-
-  useEffect(() => {
-    if (checked) setOpenBlank(null);
-  }, [checked]);
 
   useEffect(() => {
     if (openBlank === null) return;
@@ -454,20 +445,12 @@ export function QuestionWidget({
             const submission = buildSubmission();
             startCheckTransition(async () => {
               try {
-                const { result, explanation: revealed, solved } = await checkQuestionAnswer(
-                  questionId,
-                  type,
-                  submission,
-                  hadWrongAttempt
-                );
+                const { result, explanation: revealed, attempt } = await checkQuestionAnswer(questionId, type, submission);
                 setServerResult(result);
                 setServerExplanation(revealed);
                 setChecked(true);
-                if (result.correct) {
-                  if (solved) setPointsAwarded(solved.pointsAwarded);
-                } else {
-                  setHadWrongAttempt(true);
-                }
+                setOpenBlank(null);
+                if (attempt) setPointsAwarded(attempt.pointsAwarded);
               } catch {
                 // Transient failure (network, etc.) - leave `checked` false
                 // so the button stays enabled and the student can retry.
@@ -477,7 +460,7 @@ export function QuestionWidget({
           }
 
           setChecked(true);
-          if (!isCorrect()) setHadWrongAttempt(true);
+          setOpenBlank(null);
         }}
         className="bg-black text-white dark:bg-white dark:text-black rounded px-3 py-2 text-base font-medium w-fit disabled:opacity-40"
       >
