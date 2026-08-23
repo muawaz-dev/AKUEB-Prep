@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { useSearchParams, usePathname } from "next/navigation";
 import type { FilterClass } from "@/lib/questionBankFilterTree";
@@ -175,6 +175,25 @@ export function QuestionBankFilters({
   const baseline: Pending = { ...pendingFromParams(searchParams), ...initial };
   const [pending, setPending] = useState<Pending>(baseline);
 
+  // Resolved client-side (never blocking the initial, cacheable render with
+  // a getCurrentUser() call of its own) - the "Solved" filter only makes
+  // sense once you're logged in, since buildWhere treats a logged-out
+  // solved=true/false as "match nothing"/"match everything" (see
+  // lib/questionBankQuery.ts) rather than an actual per-user answer.
+  const [loggedIn, setLoggedIn] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/me")
+      .then((res) => res.json())
+      .then((data: { loggedIn: boolean }) => {
+        if (!cancelled) setLoggedIn(data.loggedIn);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function set(patch: Partial<Pending>) {
     setPending((prev) => ({ ...prev, ...patch }));
   }
@@ -335,19 +354,21 @@ export function QuestionBankFilters({
           <SelectChevron />
         </FilterField>
 
-        <FilterField label="Solved">
-          <select
-            aria-label="Solved"
-            value={pending.solved}
-            onChange={(e) => set({ solved: e.target.value })}
-            className={selectClass}
-          >
-            <option value="">All questions</option>
-            <option value="true">Solved</option>
-            <option value="false">Not solved</option>
-          </select>
-          <SelectChevron />
-        </FilterField>
+        {loggedIn && (
+          <FilterField label="Solved">
+            <select
+              aria-label="Solved"
+              value={pending.solved}
+              onChange={(e) => set({ solved: e.target.value })}
+              className={selectClass}
+            >
+              <option value="">All questions</option>
+              <option value="true">Solved</option>
+              <option value="false">Not solved</option>
+            </select>
+            <SelectChevron />
+          </FilterField>
+        )}
 
         <FilterField label="Past paper">
           <select
