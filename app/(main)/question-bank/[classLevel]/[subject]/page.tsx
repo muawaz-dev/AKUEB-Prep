@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import { resolveClassSubject, classLevelToLabel } from "@/lib/slugs";
 import { QuestionBankPageBody } from "@/components/question-bank/QuestionBankPageBody";
 import { toQuestionDto } from "@/lib/questionDto";
@@ -19,6 +20,7 @@ type ExtraParams = {
   difficulty?: string;
   pastPaper?: string;
   questionType?: string;
+  solved?: string;
   sort?: string;
 };
 
@@ -52,7 +54,8 @@ export default async function SubjectQuestionBankPage({
   const classLabel = classLevelToLabel(cls.level);
 
   const fixed = { classId: cls.id, subjectId: subject.id };
-  const where = buildWhere({ ...fixed, ...extra });
+  const userId = extra.solved ? (await getCurrentUser())?.id : undefined;
+  const where = buildWhere({ ...fixed, ...extra }, userId);
   const orderBy = buildOrderBy(extra.sort);
 
   const [filterSourceQuestions, rows] = await Promise.all([

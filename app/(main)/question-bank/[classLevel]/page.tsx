@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import { resolveClass, classLevelToLabel } from "@/lib/slugs";
 import { QuestionBankPageBody } from "@/components/question-bank/QuestionBankPageBody";
 import { toQuestionDto } from "@/lib/questionDto";
@@ -20,6 +21,7 @@ type ExtraParams = {
   difficulty?: string;
   pastPaper?: string;
   questionType?: string;
+  solved?: string;
   sort?: string;
 };
 
@@ -52,7 +54,11 @@ export default async function ClassQuestionBankPage({
   const classLabel = classLevelToLabel(cls.level);
 
   const fixed = { classId: cls.id };
-  const where = buildWhere({ ...fixed, ...extra });
+  // Only resolved (and only then opts this render out of the ISR cache
+  // `revalidate` above sets up, since it reads cookies) when a
+  // solved-status filter is actually requested.
+  const userId = extra.solved ? (await getCurrentUser())?.id : undefined;
+  const where = buildWhere({ ...fixed, ...extra }, userId);
   const orderBy = buildOrderBy(extra.sort);
 
   const [filterSourceQuestions, rows] = await Promise.all([

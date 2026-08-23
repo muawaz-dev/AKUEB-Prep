@@ -65,6 +65,7 @@ model Class {
   courses   Course[]
   chapters  Chapter[]
   questions Question[]
+  users     User[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -222,26 +223,39 @@ model Question {
   explanation String?
   status      ContentStatus @default(DRAFT)
   attemptAnswers TestAttemptAnswer[]
-  solvedBy    SolvedQuestion[]
+  attempts    QuestionAttempt[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@index([classId, subjectId])
 }
 
-// Tracks a user solving a Question-bank entry. "Solved" means the question's
-// correctness check passed at least once; the unique constraint means it's
-// recorded only the first time, LeetCode-style - retrying after that never
-// creates a second row or changes pointsAwarded.
-model SolvedQuestion {
-  id              String   @id @default(cuid())
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String
-  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  questionId      String
-  solvedAt        DateTime @default(now())
-  pointsAwarded   Int
-  firstTryCorrect Boolean
+// Tracks a user's history with one Question-bank entry - one row per
+// (user, question), created the moment it's first attempted (right or
+// wrong), not just once solved. `solved` flips true the first time the
+// check passes fully; `pointsAwarded`/`firstTryCorrect` are set then too
+// (full credit if no attempt row existed before that check, half credit
+// otherwise) and are otherwise inert once solved - retrying after that
+// never changes them, LeetCode-style.
+//
+// FILL_IN_BLANK is the exception: it grades with partial credit per blank
+// (see lib/points.ts's fillBlankPoints), so `correctBlanks`/
+// `firstCheckBlankCount` and `pointsAwarded` can keep growing across
+// multiple checks even before `solved` becomes true - blanks correct on
+// the very first check are frozen at full rate, ones fixed later top up at
+// half rate. Both fields are null/unused for every other question type.
+model QuestionAttempt {
+  id                   String    @id @default(cuid())
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String
+  question             Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId           String
+  solved               Boolean   @default(false)
+  solvedAt             DateTime?
+  pointsAwarded        Int       @default(0)
+  firstTryCorrect      Boolean   @default(false)
+  correctBlanks        Json?
+  firstCheckBlankCount Int?
 
   @@unique([userId, questionId])
   @@index([userId])
@@ -252,15 +266,24 @@ model SolvedQuestion {
 // login (see lib/auth.ts), never auto-generated. Supabase owns credentials
 // entirely; this table only holds app-specific fields.
 model User {
-  id              String           @id
-  email           String           @unique
-  name            String?
-  isAdmin         Boolean          @default(false)
-  progress        UserProgress[]
-  testAttempts    TestAttempt[]
-  solvedQuestions SolvedQuestion[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id               String            @id
+  email            String            @unique
+  name             String?
+  // The student's own grade level, self-selected on the profile page - used
+  // to scope class-specific views (e.g. the subject-overview dashboard,
+  // where a Subject like Mathematics spans multiple classes with entirely
+  // different chapters). Nullable: existing users have none until they set
+  // one, and picking one is optional.
+  class            Class?            @relation(fields: [classId], references: [id], onDelete: SetNull)
+  classId          String?
+  isAdmin          Boolean           @default(false)
+  progress         UserProgress[]
+  testAttempts     TestAttempt[]
+  questionAttempts QuestionAttempt[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([classId])
 }
 
 model UserProgress {

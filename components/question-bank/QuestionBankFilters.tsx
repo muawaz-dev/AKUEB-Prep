@@ -27,6 +27,7 @@ export type Pending = {
   difficulty: string;
   pastPaper: string;
   questionType: string;
+  solved: string;
   sort: string;
 };
 
@@ -93,6 +94,7 @@ function pendingFromParams(params: URLSearchParams): Pending {
     difficulty: params.get("difficulty") ?? "",
     pastPaper: params.get("pastPaper") ?? "",
     questionType: params.get("questionType") ?? "",
+    solved: params.get("solved") ?? "",
     sort: params.get("sort") ?? "",
   };
 }
@@ -329,6 +331,20 @@ export function QuestionBankFilters({
             <option value="">All types</option>
             <option value="OBJECTIVE">Objective (MCQs)</option>
             <option value="SUBJECTIVE">Subjective (non-MCQ)</option>
+          </select>
+          <SelectChevron />
+        </FilterField>
+
+        <FilterField label="Solved">
+          <select
+            aria-label="Solved"
+            value={pending.solved}
+            onChange={(e) => set({ solved: e.target.value })}
+            className={selectClass}
+          >
+            <option value="">All questions</option>
+            <option value="true">Solved</option>
+            <option value="false">Not solved</option>
           </select>
           <SelectChevron />
         </FilterField>

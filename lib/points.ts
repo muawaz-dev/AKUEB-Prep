@@ -1,19 +1,53 @@
-import type { Difficulty } from "@/app/generated/prisma/enums";
+import type { Difficulty, QuestionType } from "@/app/generated/prisma/enums";
 
-// Purely difficulty-based - no length/parts-count multiplier, so an Easy
-// question with many parts can't outscore a Hard single-part question.
-export const DIFFICULTY_POINTS: Record<Difficulty, number> = {
-  EASY: 10,
-  MEDIUM: 25,
-  HARD: 50,
+// MCQ is worth less than every other type at the same difficulty - picking
+// from a handful of options is easier than producing an answer from
+// scratch. No length/parts-count multiplier either way, so a question with
+// many parts can't outscore a harder single-part one.
+export const MCQ_DIFFICULTY_POINTS: Record<Difficulty, number> = {
+  EASY: 3,
+  MEDIUM: 5,
+  HARD: 10,
 };
+export const OTHER_DIFFICULTY_POINTS: Record<Difficulty, number> = {
+  EASY: 8,
+  MEDIUM: 15,
+  HARD: 20,
+};
+
+export function basePoints(type: QuestionType, difficulty: Difficulty): number {
+  const table = type === "MCQ" ? MCQ_DIFFICULTY_POINTS : OTHER_DIFFICULTY_POINTS;
+  return table[difficulty] ?? table.MEDIUM;
+}
 
 // Full points on a first-try correct check; half points if it took one or
 // more wrong attempts first. Binary - doesn't decay further with more
 // wrong attempts, since retrying-until-correct is the intended philosophy.
-export function pointsForAttempt(difficulty: Difficulty, firstTryCorrect: boolean): number {
-  const base = DIFFICULTY_POINTS[difficulty] ?? DIFFICULTY_POINTS.MEDIUM;
+// Covers every type except FILL_IN_BLANK, which grades with partial credit
+// per blank instead (see fillBlankPoints below).
+export function pointsForAttempt(type: QuestionType, difficulty: Difficulty, firstTryCorrect: boolean): number {
+  const base = basePoints(type, difficulty);
   return firstTryCorrect ? base : Math.floor(base / 2);
+}
+
+// FILL_IN_BLANK: the question's base points are split evenly across its
+// blanks. Blanks correct on the very first check ever earn full rate;
+// blanks that only became correct on a later check earn half rate (same
+// full/half split as pointsForAttempt, applied per blank instead of to the
+// whole question). `firstCheckBlankCount` is frozen the moment the
+// question's first attempt is recorded, so this stays stable no matter how
+// many times it's recomputed as more blanks get topped up.
+export function fillBlankPoints(
+  difficulty: Difficulty,
+  totalBlanks: number,
+  firstCheckBlankCount: number,
+  correctBlankCount: number
+): number {
+  if (totalBlanks === 0) return 0;
+  const base = basePoints("FILL_IN_BLANK", difficulty);
+  const perBlank = base / totalBlanks;
+  const laterCorrect = correctBlankCount - firstCheckBlankCount;
+  return Math.round(perBlank * firstCheckBlankCount + perBlank * 0.5 * laterCorrect);
 }
 
 export type Tier = { name: string; threshold: number; minHardSolved?: number };

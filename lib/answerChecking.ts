@@ -23,7 +23,10 @@ export type CheckResult =
   | { type: "NUMERIC"; correct: boolean }
   | { type: "SHORT_TEXT"; correct: boolean }
   | { type: "TRUE_FALSE"; correct: boolean; statements: { isTrue: boolean; explanation?: string }[] }
-  | { type: "FILL_IN_BLANK"; correct: boolean; blanks: { answer: string }[] };
+  // correctBlanks: indices of blanks that matched this submission - lets
+  // callers award fill-in-the-blank partial credit without re-running
+  // matches() themselves (see lib/points.ts's fillBlankPoints).
+  | { type: "FILL_IN_BLANK"; correct: boolean; blanks: { answer: string }[]; correctBlanks: number[] };
 
 // Pulls the {num} and {den} out of a \frac at `openIdx` (which must point at
 // the "{" opening the first group), respecting nested braces so something
@@ -242,8 +245,13 @@ export function checkAnswer(type: QuestionType, data: Record<string, unknown>, s
 
   if (type === "FILL_IN_BLANK" && submission.type === "FILL_IN_BLANK") {
     const blanks = (data.blanks as { options?: string[]; answer: string }[]) ?? [];
-    const correct = blanks.every((b, i) => matches(submission.values[i] ?? "", b.answer));
-    return { type: "FILL_IN_BLANK", correct, blanks: blanks.map((b) => ({ answer: b.answer })) };
+    const correctBlanks = blanks.flatMap((b, i) => (matches(submission.values[i] ?? "", b.answer) ? [i] : []));
+    return {
+      type: "FILL_IN_BLANK",
+      correct: correctBlanks.length === blanks.length,
+      blanks: blanks.map((b) => ({ answer: b.answer })),
+      correctBlanks,
+    };
   }
 
   throw new Error(`Submission type "${submission.type}" does not match question type "${type}"`);

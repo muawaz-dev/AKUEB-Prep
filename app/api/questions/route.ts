@@ -16,31 +16,37 @@ const DEFAULT_TAKE = 15;
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
 
-  const where = buildWhere({
-    classId: params.get("classId"),
-    subjectId: params.get("subjectId"),
-    chapterId: params.get("chapterId"),
-    topicId: params.get("topicId"),
-    sloId: params.get("sloId"),
-    difficulty: params.get("difficulty"),
-    pastPaper: params.get("pastPaper"),
-    questionType: params.get("questionType"),
-  });
+  // Resolved unconditionally (this route already isn't ISR-cached like the
+  // pages it backs) - reused below both for the solved-status filter and
+  // for resolving each returned question's own solved badge.
+  const user = await getCurrentUser();
+
+  const where = buildWhere(
+    {
+      classId: params.get("classId"),
+      subjectId: params.get("subjectId"),
+      chapterId: params.get("chapterId"),
+      topicId: params.get("topicId"),
+      sloId: params.get("sloId"),
+      difficulty: params.get("difficulty"),
+      pastPaper: params.get("pastPaper"),
+      questionType: params.get("questionType"),
+      solved: params.get("solved"),
+    },
+    user?.id
+  );
   const orderBy = buildOrderBy(params.get("sort"));
 
   const offset = Math.max(0, Number(params.get("offset")) || 0);
   const take = Math.max(1, Math.min(50, Number(params.get("take")) || DEFAULT_TAKE));
 
-  const [rows, user] = await Promise.all([
-    prisma.question.findMany({
-      where,
-      orderBy,
-      skip: offset,
-      take: take + 1,
-      include: { class: true, subject: true, chapter: true, topic: true, slo: true },
-    }),
-    getCurrentUser(),
-  ]);
+  const rows = await prisma.question.findMany({
+    where,
+    orderBy,
+    skip: offset,
+    take: take + 1,
+    include: { class: true, subject: true, chapter: true, topic: true, slo: true },
+  });
 
   const hasMore = rows.length > take;
   const questions = rows.slice(0, take).map(toQuestionDto);

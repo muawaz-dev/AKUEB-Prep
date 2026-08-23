@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import { QuestionBankPageBody } from "@/components/question-bank/QuestionBankPageBody";
 import { toQuestionDto } from "@/lib/questionDto";
 import { buildFilterTree } from "@/lib/questionBankFilterTree";
@@ -18,11 +19,16 @@ export default async function QuestionBankPage({
     difficulty?: string;
     pastPaper?: string;
     questionType?: string;
+    solved?: string;
     sort?: string;
   }>;
 }) {
   const params = await searchParams;
-  const where = buildWhere(params);
+  // Only resolved (and only then opts this render out of caching, since it
+  // reads cookies) when a solved-status filter is actually requested -
+  // every other combination of filters stays cacheable.
+  const userId = params.solved ? (await getCurrentUser())?.id : undefined;
+  const where = buildWhere(params, userId);
   const orderBy = buildOrderBy(params.sort);
 
   // None of these two depend on each other's result, so they run concurrently.

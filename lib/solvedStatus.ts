@@ -5,8 +5,8 @@ import { prisma } from "./prisma";
 // "Solved" status never forces a page to be dynamically rendered per user.
 export async function getSolvedIds(userId: string, questionIds: string[]): Promise<string[]> {
   if (questionIds.length === 0) return [];
-  const rows = await prisma.solvedQuestion.findMany({
-    where: { userId, questionId: { in: questionIds } },
+  const rows = await prisma.questionAttempt.findMany({
+    where: { userId, questionId: { in: questionIds }, solved: true },
     select: { questionId: true },
   });
   return rows.map((r) => r.questionId);

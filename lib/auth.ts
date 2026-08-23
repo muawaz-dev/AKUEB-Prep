@@ -7,7 +7,7 @@ import { Prisma } from "@/app/generated/prisma/client";
 // to worry about anymore (Supabase owns credentials in its own auth.users
 // table), but keeping an explicit select here means this return value stays
 // safe to read from Server Components even as more fields get added later.
-const PROFILE_SELECT = { id: true, email: true, name: true, isAdmin: true, createdAt: true } as const;
+const PROFILE_SELECT = { id: true, email: true, name: true, classId: true, isAdmin: true, createdAt: true } as const;
 
 export async function getCurrentUser() {
   const supabase = await createClient();

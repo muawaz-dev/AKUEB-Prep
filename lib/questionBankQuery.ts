@@ -12,13 +12,27 @@ export type QuestionBankParams = {
   // "OBJECTIVE" = MCQ only, "SUBJECTIVE" = every other question type - matches
   // how AKU-EB itself splits an exam paper, not a data model distinction.
   questionType?: string | null;
+  // "true"/"false" - whether the current user has ever fully solved the
+  // question (QuestionAttempt.solved). Unlike every other filter this one
+  // is per-user, so it needs `userId` (see buildWhere) - always resolved
+  // server-side from the session, never from a client-supplied value.
+  solved?: string | null;
   sort?: string | null;
 };
 
 // Shared by app/(main)/question-bank/page.tsx (initial server render) and
 // app/api/questions/route.ts ("load more") so the two never drift apart -
 // same filters always produce the same result set either way.
-export function buildWhere(params: QuestionBankParams): Prisma.QuestionWhereInput {
+//
+// `userId` is only relevant for params.solved, and is deliberately a
+// separate argument rather than part of QuestionBankParams: every other
+// field here is safe to take straight from the URL, but a solved-status
+// filter has to be tied to whoever's actually logged in, not whatever the
+// URL happens to say. Pass null/omit when solved isn't being filtered (the
+// common case) or when nobody's logged in - see each page's conditional
+// getCurrentUser() call, which only runs (and only then opts that request
+// out of the ISR cache other filters get to keep) when params.solved is set.
+export function buildWhere(params: QuestionBankParams, userId?: string | null): Prisma.QuestionWhereInput {
   const where: Prisma.QuestionWhereInput = { status: "PUBLISHED" };
   if (params.classId) where.classId = params.classId;
   if (params.subjectId) where.subjectId = params.subjectId;
@@ -29,6 +43,16 @@ export function buildWhere(params: QuestionBankParams): Prisma.QuestionWhereInpu
   if (params.pastPaper) where.pastPaper = params.pastPaper;
   if (params.questionType === "OBJECTIVE") where.type = "MCQ";
   else if (params.questionType === "SUBJECTIVE") where.type = { not: "MCQ" };
+  if (params.solved === "true") {
+    // Logged out ⇒ nothing's ever been solved - match nothing rather than
+    // silently ignoring the filter.
+    if (userId) where.attempts = { some: { userId, solved: true } };
+    else where.id = { in: [] };
+  } else if (params.solved === "false") {
+    // Logged out ⇒ every question already qualifies as "not solved" - no
+    // filtering needed.
+    if (userId) where.attempts = { none: { userId, solved: true } };
+  }
   return where;
 }
 
@@ -55,6 +79,7 @@ export function toQueryString(params: QuestionBankParams): string {
   if (params.difficulty) qs.set("difficulty", params.difficulty);
   if (params.pastPaper) qs.set("pastPaper", params.pastPaper);
   if (params.questionType) qs.set("questionType", params.questionType);
+  if (params.solved) qs.set("solved", params.solved);
   if (params.sort) qs.set("sort", params.sort);
   return qs.toString();
 }
