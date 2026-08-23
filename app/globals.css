@@ -31,6 +31,19 @@ math-field::part(menu-toggle) {
   color-scheme: dark;
 }
 
+/* `color-scheme: dark` is meant to make a <select>'s native popup list draw
+   with a dark UA palette, but that's unreliable across browsers/embedded
+   webviews - when it doesn't kick in, the popup stays light while its
+   <option>s still inherit our --foreground (near-white in dark mode),
+   producing near-invisible light-on-light text. Authors CAN reliably style
+   <option> color/background directly (unlike most other popup chrome), so
+   pin them to a fixed light-mode pair instead of leaving them dependent on
+   the (unreliable) native dark palette. */
+select option {
+  color: #171717;
+  background-color: #ffffff;
+}
+
 /* MathLive picks its selection/highlight colors partly from the OS-level
    prefers-color-scheme media query, which can disagree with this app's own
    light/dark toggle (a class on <html>, independent of OS setting) and

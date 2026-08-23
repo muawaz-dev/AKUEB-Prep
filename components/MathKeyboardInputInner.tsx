@@ -68,6 +68,7 @@ export function MathKeyboardInput({
   placeholder,
   className,
   inputBoxClassName,
+  disabled,
 }: {
   name?: string;
   value: string;
@@ -75,6 +76,7 @@ export function MathKeyboardInput({
   placeholder?: string;
   className?: string;
   inputBoxClassName?: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -93,6 +95,7 @@ export function MathKeyboardInput({
     if (!container) return;
     const mf = new MathfieldElement({ mathVirtualKeyboardPolicy: "manual", defaultMode: "math" });
     mf.value = value;
+    mf.disabled = !!disabled;
     mf.className = "flex-1 min-w-0 text-sm px-3 py-1.5";
     if (placeholder) mf.setAttribute("placeholder", placeholder);
     const handleInput = () => onChangeRef.current(mf.value);
@@ -116,6 +119,12 @@ export function MathKeyboardInput({
   }, [value]);
 
   useEffect(() => {
+    const mf = mathfieldRef.current;
+    if (mf) mf.disabled = !!disabled;
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
+  useEffect(() => {
     if (!open) return;
     function handleClickOutside(e: MouseEvent) {
       if (!wrapperRef.current?.contains(e.target as Node)) setOpen(false);
@@ -135,15 +144,16 @@ export function MathKeyboardInput({
   return (
     <div ref={wrapperRef} className={`relative inline-block ${className ?? ""}`}>
       <div
-        className={`flex items-stretch rounded border overflow-hidden ${inputBoxClassName ?? "border-black/20 dark:border-white/20"}`}
+        className={`flex items-stretch rounded border overflow-hidden ${disabled ? "opacity-60" : ""} ${inputBoxClassName ?? "border-black/20 dark:border-white/20"}`}
       >
         <div ref={fieldContainerRef} className="flex-1 min-w-0 flex items-center" />
         {name && <input type="hidden" name={name} value={value} readOnly />}
         <button
           type="button"
+          disabled={disabled}
           onClick={() => setOpen((o) => !o)}
           aria-label="Open math keyboard"
-          className={`px-3 text-sm border-l border-black/20 dark:border-white/20 ${
+          className={`px-3 text-sm border-l border-black/20 dark:border-white/20 disabled:opacity-40 ${
             open ? "bg-black/10 dark:bg-white/10" : "hover:bg-black/5 dark:hover:bg-white/5"
           }`}
         >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import type { QuestionType } from "@/app/generated/prisma/enums";
 import { MarkdownContent } from "./MarkdownContent";
 import { MathKeyboardInput } from "../MathKeyboardInput";
@@ -55,19 +55,18 @@ export function QuestionWidget({
     () => (data.statements ?? []).map(() => null)
   );
   const [blankInputs, setBlankInputs] = useState<string[]>(() => (data.blanks ?? []).map(() => ""));
+  // Locks the answer inputs and the check button for good the moment an
+  // attempt is checked - a student gets exactly one shot per question, and
+  // only remounting the widget (new question, filter change, page refresh)
+  // clears this.
   const [checked, setChecked] = useState(false);
-  // Gates the correct-answer reveal and explanation behind a manual click
-  // regardless of whether the attempt was right or wrong, so retrying after
-  // an edit doesn't just mean "look at the answer that was already given
-  // away" - resets on every new attempt (see resetAttempt).
+  // Purely a display toggle for the written explanation text - correct/
+  // incorrect highlighting already shows as soon as `checked` is true, so
+  // there's nothing left to gate by hiding this again.
   const [explanationRevealed, setExplanationRevealed] = useState(false);
   const [openBlank, setOpenBlank] = useState<number | null>(null);
   const blankMenuRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  // Whether any check attempt in this component's lifetime came back wrong -
-  // used to tell the question bank apart a first-try-correct solve (full
-  // points) from a solve after retrying (half points). Does not reset with
-  // resetAttempt(): it must survive across edits/retries within the session.
-  const [hadWrongAttempt, setHadWrongAttempt] = useState(false);
+  const openBlankMenuRef = useRef<HTMLDivElement | null>(null);
   const [pointsAwarded, setPointsAwarded] = useState<number | null>(null);
   // For tracked questions (questionId set), `data` has the answer key
   // stripped server-side (see lib/questionWidgetData.ts) - these hold what
@@ -86,6 +85,10 @@ export function QuestionWidget({
   }
 
   useEffect(() => {
+    if (checked) setOpenBlank(null);
+  }, [checked]);
+
+  useEffect(() => {
     if (openBlank === null) return;
     function handleClickOutside(e: MouseEvent) {
       if (!blankMenuRefs.current[openBlank as number]?.contains(e.target as Node)) {
@@ -94,6 +97,32 @@ export function QuestionWidget({
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openBlank]);
+
+  // The options dropdown is absolutely positioned off a small inline anchor
+  // that can sit anywhere along a wrapped line of text - left-aligning it
+  // unconditionally lets it run past the right edge of the viewport on
+  // narrow screens. Reassigning `left` (rather than a visual `transform`)
+  // after it renders keeps the box's actual layout position - and therefore
+  // the page's scrollable width - inside the viewport too, not just its
+  // painted position.
+  useLayoutEffect(() => {
+    if (openBlank === null) return;
+    const el = openBlankMenuRef.current;
+    const anchor = blankMenuRefs.current[openBlank];
+    if (!el || !anchor) return;
+    el.style.left = "0px";
+    const margin = 8;
+    const anchorLeft = anchor.getBoundingClientRect().left;
+    const menuWidth = el.getBoundingClientRect().width;
+    let left = 0;
+    if (anchorLeft + left + menuWidth > window.innerWidth - margin) {
+      left = window.innerWidth - margin - menuWidth - anchorLeft;
+    }
+    if (anchorLeft + left < margin) {
+      left = margin - anchorLeft;
+    }
+    el.style.left = `${left}px`;
   }, [openBlank]);
 
   const mcqQuestions = data.mcqQuestions ?? [];
@@ -167,10 +196,10 @@ export function QuestionWidget({
   // server-side, same reasoning as the answer key); the real text only
   // arrives via checkQuestionAnswer once a check comes back.
   const effectiveExplanation = questionId ? serverExplanation : explanation;
-  // Explanation always waits for the reveal button, whether the attempt was
-  // right or wrong - "Correct!"/"Not quite." already communicates the
-  // outcome on its own.
-  const revealAnswers = checked && explanationRevealed;
+  // Correct-answer highlighting shows the moment the attempt is checked -
+  // only the written explanation text waits for the reveal button.
+  const revealAnswers = checked;
+  const explanationVisible = checked && explanationRevealed;
   const mcqCorrectCount = mcqQuestions.filter((_, i) => mcqSelections[i] === mcqCorrectIndex(i)).length;
   const tfCorrectCount = statements.filter((_, i) => tfSelections[i] === statementIsTrue(i)).length;
   const blankCorrectCount = blanks.filter((_, i) => {
@@ -231,6 +260,7 @@ export function QuestionWidget({
                           type="radio"
                           name={`mcq-${qi}-${prompt}`}
                           checked={isSelected}
+                          disabled={checked}
                           onChange={() => {
                             setMcqSelections((prev) => prev.map((v, idx) => (idx === qi ? ci : v)));
                             resetAttempt();
@@ -241,7 +271,7 @@ export function QuestionWidget({
                     );
                   })}
                 </div>
-                {revealAnswers && q.explanation && (
+                {explanationVisible && q.explanation && (
                   <p className={`text-xs ${gotRight ? "text-green-600" : "text-red-600"}`}>
                     <MarkdownContent text={q.explanation} inline />
                   </p>
@@ -256,17 +286,19 @@ export function QuestionWidget({
         <input
           type="number"
           value={numericInput}
+          disabled={checked}
           onChange={(e) => {
             setNumericInput(e.target.value);
             resetAttempt();
           }}
-          className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent w-40"
+          className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent w-40 disabled:opacity-60"
         />
       )}
 
       {type === "SHORT_TEXT" && (
         <MathKeyboardInput
           value={textInput}
+          disabled={checked}
           onChange={(v) => {
             setTextInput(v);
             resetAttempt();
@@ -296,11 +328,12 @@ export function QuestionWidget({
                         <button
                           key={String(option)}
                           type="button"
+                          disabled={checked}
                           onClick={() => {
                             setTfSelections((prev) => prev.map((v, idx) => (idx === i ? option : v)));
                             resetAttempt();
                           }}
-                          className={`text-xs font-medium rounded px-2.5 py-1 border ${
+                          className={`text-xs font-medium rounded px-2.5 py-1 border disabled:opacity-60 ${
                             isSelected && checked
                               ? gotRight
                                 ? "border-green-600 bg-green-600/10 text-green-700 dark:text-green-500"
@@ -318,7 +351,7 @@ export function QuestionWidget({
                     })}
                   </div>
                 </div>
-                {revealAnswers && statementExplanation(i) && (
+                {explanationVisible && statementExplanation(i) && (
                   <p className={`text-xs ${gotRight ? "text-green-600" : "text-red-600"}`}>
                     <MarkdownContent text={statementExplanation(i)!} inline />
                   </p>
@@ -353,13 +386,17 @@ export function QuestionWidget({
                   >
                     <button
                       type="button"
+                      disabled={checked}
                       onClick={() => setOpenBlank((prev) => (prev === i ? null : i))}
-                      className={`border rounded px-2 py-1 bg-transparent text-sm ${stateClass}`}
+                      className={`border rounded px-2 py-1 bg-transparent text-sm disabled:opacity-60 ${stateClass}`}
                     >
                       {value ? <MarkdownContent text={value} inline /> : <span className="opacity-50">Choose...</span>}
                     </button>
                     {openBlank === i && (
-                      <div className="absolute left-0 top-full mt-1 z-10 min-w-max border border-black/20 dark:border-white/20 rounded bg-white dark:bg-black shadow-lg py-1">
+                      <div
+                        ref={openBlankMenuRef}
+                        className="absolute left-0 top-full mt-1 z-10 w-max max-w-[calc(100vw-1rem)] border border-black/20 dark:border-white/20 rounded bg-white dark:bg-black shadow-lg py-1"
+                      >
                         {blank.options.map((option) => (
                           <button
                             key={option}
@@ -369,7 +406,7 @@ export function QuestionWidget({
                               resetAttempt();
                               setOpenBlank(null);
                             }}
-                            className="block w-full text-left px-3 py-1 text-sm whitespace-nowrap hover:bg-black/5 dark:hover:bg-white/10"
+                            className="block w-full text-left px-3 py-1 text-sm whitespace-normal break-words hover:bg-black/5 dark:hover:bg-white/10"
                           >
                             <MarkdownContent text={option} inline />
                           </button>
@@ -380,6 +417,7 @@ export function QuestionWidget({
                 ) : (
                   <MathKeyboardInput
                     value={value}
+                    disabled={checked}
                     onChange={(v) => {
                       setBlankInputs((prev) => prev.map((vv, idx) => (idx === i ? v : vv)));
                       resetAttempt();
@@ -405,26 +443,17 @@ export function QuestionWidget({
 
       <button
         type="button"
-        disabled={!canCheck || checkPending}
+        disabled={!canCheck || checkPending || checked}
         onClick={() => {
           if (questionId) {
             const submission = buildSubmission();
             startCheckTransition(async () => {
               try {
-                const { result, explanation: revealed, solved } = await checkQuestionAnswer(
-                  questionId,
-                  type,
-                  submission,
-                  hadWrongAttempt
-                );
+                const { result, explanation: revealed, attempt } = await checkQuestionAnswer(questionId, type, submission);
                 setServerResult(result);
                 setServerExplanation(revealed);
                 setChecked(true);
-                if (result.correct) {
-                  if (solved) setPointsAwarded(solved.pointsAwarded);
-                } else {
-                  setHadWrongAttempt(true);
-                }
+                if (attempt) setPointsAwarded(attempt.pointsAwarded);
               } catch {
                 // Transient failure (network, etc.) - leave `checked` false
                 // so the button stays enabled and the student can retry.
@@ -434,7 +463,6 @@ export function QuestionWidget({
           }
 
           setChecked(true);
-          if (!isCorrect()) setHadWrongAttempt(true);
         }}
         className="bg-black text-white dark:bg-white dark:text-black rounded px-3 py-2 text-base font-medium w-fit disabled:opacity-40"
       >
@@ -450,19 +478,17 @@ export function QuestionWidget({
       {checked && (
         <div className={`text-base ${correct ? "text-green-600" : "text-red-600"}`}>
           {correct ? "Correct!" : "Not quite."}
-          {correct && pointsAwarded !== null && (
-            <span className="ml-2 text-sm font-medium text-black/60 dark:text-white/60">+{pointsAwarded} points</span>
+          {pointsAwarded !== null && (
+            <span className="ml-2 text-sm font-medium text-black/60 dark:text-white/60">{pointsAwarded} points earned</span>
           )}
-          {!explanationRevealed && (
-            <button
-              type="button"
-              onClick={() => setExplanationRevealed(true)}
-              className="block mt-1 text-sm font-medium text-black/60 dark:text-white/60 hover:underline"
-            >
-              Show explanation
-            </button>
-          )}
-          {effectiveExplanation && revealAnswers && (
+          <button
+            type="button"
+            onClick={() => setExplanationRevealed((prev) => !prev)}
+            className="block mt-1 text-sm font-medium text-black/60 dark:text-white/60 hover:underline"
+          >
+            {explanationRevealed ? "Hide explanation" : "Show explanation"}
+          </button>
+          {effectiveExplanation && explanationVisible && (
             <div className="mt-1 text-black/70 dark:text-white/70">
               <MarkdownContent text={effectiveExplanation} />
             </div>
