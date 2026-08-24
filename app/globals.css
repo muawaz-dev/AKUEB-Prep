@@ -2,6 +2,80 @@
 @import "katex/dist/katex.min.css";
 @import "mathlive/static.css";
 
+/* A single equation renders as one unbreakable inline-block, so on a narrow
+   viewport it can be wider than its container. Without this, that overflow
+   just bleeds past the edge of whatever card/box it's in; giving the KaTeX
+   box its own overflow-x makes it scroll internally instead - and since a
+   non-visible overflow value stops the box from contributing its full
+   content width to an ancestor's min-content size, this also keeps it from
+   forcing flex/grid parents wider than intended (a card in a flex column,
+   an inline p, etc.).
+   overflow-y is deliberately left alone (not "hidden") - KaTeX positions
+   sub/superscripts and fraction bars slightly outside the box's nominal
+   line height, and clipping the y-axis cut those glyphs off. Per spec,
+   pairing a non-visible overflow-x with a "visible" overflow-y just
+   force-computes the latter to "auto", which only engages if something
+   actually overflows vertically (it won't here), so this stays a pure
+   horizontal scroller.
+   The padding gives tall math (fractions, superscripts, exponents) some
+   headroom instead of sitting flush against the scroll box's edge - both
+   for its own sake and so the always-on scrollbar below doesn't crowd
+   descenders. */
+.katex-display {
+  overflow-x: auto;
+  padding-block: 0.35em;
+}
+.katex {
+  max-width: 100%;
+  overflow-x: auto;
+  padding-block: 0.2em;
+}
+
+/* Chrome/Edge/Firefox (desktop and Android) render a custom-styled
+   scrollbar in its classic, layout-reserving form instead of the
+   overlay-that-only-appears-on-interaction one - so as soon as a formula
+   is wider than its box, the scrollbar is visible immediately, not just
+   after the user starts dragging. This is what stops "scroll to see more"
+   from being invisible/undiscoverable on first load.
+   iOS Safari is the one exception: WebKit on iOS always uses the native
+   overlay scrollbar and gives no CSS hook to override that, so this rule
+   has no effect there - if that turns out to matter, the fallback is a JS
+   affordance (e.g. a fade/chevron shown via a scrollWidth/clientWidth
+   check), not more CSS. */
+.katex-display,
+.katex {
+  scrollbar-width: auto;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 45%, transparent) transparent;
+}
+.katex-display::-webkit-scrollbar,
+.katex::-webkit-scrollbar {
+  height: 7px;
+}
+.katex-display::-webkit-scrollbar-track,
+.katex::-webkit-scrollbar-track {
+  background: transparent;
+}
+.katex-display::-webkit-scrollbar-thumb,
+.katex::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 45%, transparent);
+  border-radius: 4px;
+}
+
+/* iOS Safari can't be made to show a persistent scrollbar at all (see
+   MathScrollHint.tsx), so this is the affordance that actually reaches
+   those users: a soft shadow along the right edge of a formula that has
+   more content past it, present the moment it renders rather than only
+   after the user finds the scroll gesture by accident. It's driven by
+   data-scrollable/data-at-end, which MathScrollHint sets from actual
+   scrollWidth/scrollLeft measurements - a translucent shadow rather than
+   an opaque cover, so it doesn't need to match the many different
+   backgrounds these formulas can sit on (page prose, a question card,
+   an MCQ choice, dark mode, ...). */
+.katex[data-scrollable="true"]:not([data-at-end="true"]),
+.katex-display[data-scrollable="true"]:not([data-at-end="true"]) {
+  box-shadow: inset -14px 0 10px -10px color-mix(in srgb, var(--foreground) 30%, transparent);
+}
+
 /* We drive math-field input with our own button panel (MathKeyboardInput),
    so hide MathLive's own built-in virtual-keyboard/menu toggle icons and
    the popup keyboard they open - otherwise clicking them opens a second,
